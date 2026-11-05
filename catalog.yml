@@ -1,0 +1,9 @@
+# What the Lab reads to show this catalog. Raise the version with make release when items change in a way people should notice.
+x-gravitee-catalog:
+  schema: 1   # For older Gravitee Labs: written by catalog.py
+  id: "ricardo-public-demos"
+  name: "Ricardo's public demos"
+  description: "Demos for Gravitee Lab"
+  version: 0.1.0
+  lab: 1   # For older Gravitee Labs: written by catalog.py
+  license: "UNLICENSED"
