@@ -1,0 +1,5 @@
+name: Claude Code developers
+description: Employees using Claude Code through the governed LLM proxy
+settings:
+  app:
+    type: SIMPLE

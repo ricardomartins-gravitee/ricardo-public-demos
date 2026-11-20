@@ -1,0 +1,4 @@
+plan:
+  security:
+    customApiKey: # a subscription can ask for the key Claude Code already sends
+      enabled: true

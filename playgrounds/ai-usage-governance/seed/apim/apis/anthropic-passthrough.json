@@ -1,0 +1,71 @@
+{
+  "api": {
+    "definitionVersion": "V4",
+    "type": "PROXY",
+    "id": "a1c0de00-0000-4000-8000-000000000003",
+    "name": "Anthropic passthrough",
+    "description": "Non-message calls the Edge daemon forwards, such as Claude Code telemetry. Payloads are not stored, because this path can carry a sign-in.",
+    "apiVersion": "1.0",
+    "state": "STARTED",
+    "visibility": "PRIVATE",
+    "lifecycleState": "PUBLISHED",
+    "labels": ["ai-usage-governance"],
+    "tags": [],
+    "categories": [],
+    "listeners": [
+      {
+        "type": "HTTP",
+        "paths": [{"path": "/interception/passthrough/", "overrideAccess": false}],
+        "entrypoints": [{"type": "http-proxy", "qos": "AUTO", "configuration": {}}]
+      }
+    ],
+    "endpointGroups": [
+      {
+        "name": "anthropic",
+        "type": "http-proxy",
+        "loadBalancer": {"type": "ROUND_ROBIN"},
+        "endpoints": [
+          {
+            "name": "anthropic-api",
+            "type": "http-proxy",
+            "weight": 1,
+            "inheritConfiguration": false,
+            "configuration": {"target": "https://api.anthropic.com"}
+          }
+        ]
+      }
+    ],
+    "analytics": {
+      "enabled": true,
+      "logging": {
+        "mode": {"endpoint": false, "entrypoint": true},
+        "phase": {"request": true, "response": true},
+        "content": {
+          "headers": false,
+          "payload": false,
+          "messageHeaders": false,
+          "messagePayload": false,
+          "messageMetadata": false
+        }
+      },
+      "tracing": {"enabled": false}
+    },
+    "flowExecution": {"mode": "DEFAULT", "matchRequired": false},
+    "flows": []
+  },
+  "plans": [
+    {
+      "definitionVersion": "V4",
+      "id": "a1c0de00-0000-4000-8000-000000000013",
+      "name": "Edge daemon",
+      "description": "The Edge daemon on the device. The daemon does not authenticate to the gateway.",
+      "security": {"type": "KEY_LESS", "configuration": {}},
+      "mode": "STANDARD",
+      "order": 1,
+      "status": "PUBLISHED",
+      "type": "API",
+      "validation": "AUTO",
+      "flows": []
+    }
+  ]
+}
