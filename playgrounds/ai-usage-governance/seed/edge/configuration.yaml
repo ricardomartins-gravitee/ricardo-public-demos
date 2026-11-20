@@ -1,0 +1,18 @@
+# The pass starts with Claude Code talking to Anthropic. The presenter replaces the DNS domain during the pass.
+# gatewayUrl and reactorUrl cannot change after Edge configuration exists.
+gatewayUrl: ${APIM_GATEWAY_URL}
+reactorUrl: ${RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_REACTOR_URL:-http://localhost:18093} # Reactor the daemon polls
+proxy:
+  dnsDomains:
+    - name: unused.invalid # a name nothing calls, so interception is off
+  routes:
+    - pathPrefix: /v1/messages
+      apiPath: /interception/claude
+      provider: anthropic
+    - pathPrefix: /
+      apiPath: /interception/passthrough
+      provider: anthropic
+shadowAi:
+  domains:
+    - name: api.anthropic.com
+  reportInterval: PT2M

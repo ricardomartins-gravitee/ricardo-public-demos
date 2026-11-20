@@ -1,0 +1,349 @@
+{
+  "api": {
+    "definitionVersion": "V4",
+    "type": "LLM_PROXY",
+    "id": "a1c0de00-0000-4000-8000-000000000002",
+    "name": "Governed models",
+    "apiVersion": "1.0",
+    "description": "The LLM proxy for employee AI usage. AI routing sends every message to local Gemma. If that call fails, failover retries the same route on local Qwen. Provider endpoints such as Anthropic stay configured so their models remain visible. The plan is keyless because the Edge daemon does not send a Gravitee API key.",
+    "state": "STARTED",
+    "lifecycleState": "PUBLISHED",
+    "visibility": "PRIVATE",
+    "labels": [
+      "ai-usage-governance"
+    ],
+    "tags": [],
+    "categories": [],
+    "listeners": [
+      {
+        "type": "HTTP",
+        "paths": [
+          {
+            "path": "/interception/claude/",
+            "overrideAccess": false
+          }
+        ],
+        "entrypoints": [
+          {
+            "type": "llm-proxy",
+            "qos": "AUTO",
+            "configuration": {
+              "enforceUsage": true
+            }
+          }
+        ]
+      }
+    ],
+    "endpointGroups": [
+      {
+        "name": "ollama",
+        "type": "llm-proxy",
+        "loadBalancer": {
+          "type": "ROUND_ROBIN"
+        },
+        "sharedConfiguration": "{\"http\": {\"version\": \"HTTP_1_1\", \"connectTimeout\": 3000, \"readTimeout\": 120000, \"idleTimeout\": 60000, \"maxConcurrentConnections\": 20, \"keepAlive\": true, \"keepAliveTimeout\": 30000, \"pipelining\": false, \"useCompression\": true, \"followRedirects\": false, \"propagateClientAcceptEncoding\": false, \"propagateClientHost\": false}}",
+        "endpoints": [
+          {
+            "name": "gemma",
+            "type": "llm-proxy",
+            "weight": 1,
+            "inheritConfiguration": true,
+            "services": {},
+            "secondary": false,
+            "tenants": [],
+            "configuration": {
+              "provider": "OPEN_AI_COMPATIBLE",
+              "target": "${OLLAMA_URL}/v1",
+              "models": [
+                {
+                  "name": "gemma4:12b",
+                  "inputPrice": 0.0,
+                  "outputPrice": 0.0,
+                  "aliases": [
+                    "gemma",
+                    "claude-haiku-4-5-20251001",
+                    "claude-haiku-5-5",
+                    "claude-sonnet-4-6",
+                    "claude-opus-5-5"
+                  ]
+                }
+              ],
+              "modelGovernance": {
+                "prefixPolicy": {
+                  "policy": "NO_PREFIX"
+                },
+                "aliasOnly": false,
+                "modelPattern": "gemma*"
+              },
+              "authentication": {
+                "type": "NONE"
+              }
+            }
+          },
+          {
+            "name": "qwen",
+            "type": "llm-proxy",
+            "weight": 1,
+            "inheritConfiguration": true,
+            "services": {},
+            "secondary": true,
+            "tenants": [],
+            "configuration": {
+              "provider": "OPEN_AI_COMPATIBLE",
+              "target": "${OLLAMA_URL}/v1",
+              "models": [
+                {
+                  "name": "qwen3:1.7b",
+                  "inputPrice": 0.0,
+                  "outputPrice": 0.0,
+                  "aliases": [
+                    "gemma",
+                    "claude-haiku-4-5-20251001",
+                    "claude-haiku-5-5",
+                    "claude-sonnet-4-6",
+                    "claude-opus-5-5"
+                  ]
+                }
+              ],
+              "modelGovernance": {
+                "prefixPolicy": {
+                  "policy": "NO_PREFIX"
+                },
+                "aliasOnly": false,
+                "modelPattern": "qwen*"
+              },
+              "authentication": {
+                "type": "NONE"
+              }
+            }
+          }
+        ],
+        "services": {}
+      },
+      {
+        "name": "anthropic",
+        "type": "llm-proxy",
+        "loadBalancer": {
+          "type": "ROUND_ROBIN"
+        },
+        "sharedConfiguration": "{\"http\": {\"version\": \"HTTP_1_1\", \"connectTimeout\": 3000, \"readTimeout\": 120000, \"idleTimeout\": 60000, \"maxConcurrentConnections\": 20, \"keepAlive\": true, \"keepAliveTimeout\": 30000, \"pipelining\": false, \"useCompression\": true, \"followRedirects\": false, \"propagateClientAcceptEncoding\": false, \"propagateClientHost\": false}}",
+        "endpoints": [
+          {
+            "name": "claude",
+            "type": "llm-proxy",
+            "weight": 1,
+            "inheritConfiguration": true,
+            "services": {},
+            "secondary": false,
+            "tenants": [],
+            "configuration": {
+              "provider": "ANTHROPIC",
+              "target": "https://api.anthropic.com",
+              "models": [
+                {
+                  "name": "claude-haiku-4-5-20251001",
+                  "inputPrice": 1.0,
+                  "outputPrice": 5.0
+                },
+                {
+                  "name": "claude-haiku-5-5",
+                  "inputPrice": 1.0,
+                  "outputPrice": 5.0
+                },
+                {
+                  "name": "claude-sonnet-4-6",
+                  "inputPrice": 3.0,
+                  "outputPrice": 15.0
+                },
+                {
+                  "name": "claude-opus-5-5",
+                  "inputPrice": 5.0,
+                  "outputPrice": 25.0
+                }
+              ],
+              "modelGovernance": {
+                "prefixPolicy": {
+                  "policy": "NO_PREFIX"
+                },
+                "aliasOnly": true,
+                "modelPattern": ""
+              },
+              "authentication": {
+                "type": "NONE"
+              }
+            }
+          }
+        ],
+        "services": {}
+      }
+    ],
+    "analytics": {
+      "enabled": true,
+      "logging": {
+        "mode": {
+          "endpoint": true,
+          "entrypoint": true
+        },
+        "phase": {
+          "request": true,
+          "response": true
+        },
+        "content": {
+          "headers": false,
+          "payload": true,
+          "messageHeaders": false,
+          "messagePayload": false,
+          "messageMetadata": false
+        }
+      },
+      "tracing": {
+        "enabled": false
+      }
+    },
+    "flowExecution": {
+      "mode": "DEFAULT",
+      "matchRequired": false
+    },
+    "failover": {
+      "enabled": true,
+      "maxRetries": 1,
+      "slowCallDuration": 180000,
+      "openStateDuration": 10000,
+      "maxFailures": 5,
+      "perSubscription": false,
+      "failureCondition": "{#response.status >= 500}",
+      "forceNextEndpointOnFailure": true
+    },
+    "flows": [
+      {
+        "name": "Govern messages",
+        "enabled": true,
+        "selectors": [
+          {
+            "type": "HTTP",
+            "path": "/v1/messages",
+            "pathOperator": "STARTS_WITH",
+            "methods": [
+              "POST"
+            ]
+          }
+        ],
+        "request": [
+          {
+            "name": "Prompt guard rails",
+            "description": "Block a malicious prompt before the model sees it",
+            "enabled": true,
+            "policy": "ai-prompt-guard-rails",
+            "configuration": {
+              "sensitivityThreshold": 0.2,
+              "resourceName": "guardrails-model",
+              "contentChecks": "MALICIOUS",
+              "promptLocation": "{#jsonPath(#request.content, '$.messages[?(@.role==\"user\")].content').$[true]}",
+              "requestPolicy": "BLOCK_REQUEST"
+            }
+          },
+          {
+            "name": "PII filtering",
+            "description": "Redact a person, email, phone number or account before the model sees it",
+            "enabled": true,
+            "policy": "pii-filtering",
+            "configuration": {
+              "resourceName": "pii-detection-token-classification-resource",
+              "threshold": 0.5,
+              "categories": [
+                "PERSON",
+                "EMAIL",
+                "PHONE",
+                "FINANCIAL_ACCOUNT"
+              ],
+              "skipResponsePayloadFiltering": true
+            }
+          },
+          {
+            "name": "Route to the local model",
+            "description": "Send the message to local Gemma. The route name is gemma, which the Gemma endpoint serves as gemma4:12b. If that call fails, failover retries the same route on the Qwen endpoint, which serves it as qwen3:1.7b.",
+            "enabled": true,
+            "policy": "ai-routing",
+            "configuration": {
+              "budgetMeasure": "COST_CONSUMED_PERCENT",
+              "onUnknownBudget": "ROUTE_LAST_BAND",
+              "onEmptyCandidates": "REJECT",
+              "bands": [
+                {
+                  "name": "Local Gemma",
+                  "selector": "ROUND_ROBIN",
+                  "candidates": [
+                    {
+                      "provider": "gemma",
+                      "model": "gemma",
+                      "weight": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "Token rate limit",
+            "description": "Stop a caller before the token budget for this minute is spent",
+            "enabled": true,
+            "policy": "token-ratelimit",
+            "configuration": {
+              "addHeaders": true,
+              "rate": {
+                "useKeyOnly": false,
+                "periodTime": 1,
+                "limit": 30000,
+                "periodTimeUnit": "MINUTES",
+                "key": ""
+              },
+              "strategy": "ASYNC_MODE"
+            }
+          }
+        ],
+        "response": [],
+        "subscribe": [],
+        "publish": [],
+        "entrypointConnect": [],
+        "interact": [],
+        "tags": []
+      }
+    ],
+    "resources": [
+      {
+        "name": "guardrails-model",
+        "type": "ai-model-text-classification",
+        "configuration": "{\"model\":{\"type\":\"GRAVITEE_LLAMA_PROMPT_GUARD_22M_MODEL\"}}",
+        "enabled": true
+      },
+      {
+        "name": "pii-detection-token-classification-resource",
+        "type": "ai-model-token-classification",
+        "configuration": "{\"model\":{\"type\":\"GRAVITEE_BERT_SMALL_PII_DETECTION\"}}",
+        "enabled": true
+      }
+    ]
+  },
+  "plans": [
+    {
+      "definitionVersion": "V4",
+      "id": "a1c0de00-0000-4000-8000-000000000012",
+      "name": "Edge daemon",
+      "description": "The Edge daemon on the device. The daemon does not authenticate to the gateway, so this plan is keyless and the API stays on the local machine.",
+      "mode": "STANDARD",
+      "status": "PUBLISHED",
+      "validation": "AUTO",
+      "type": "API",
+      "order": 1,
+      "tags": [],
+      "characteristics": [],
+      "excludedGroups": [],
+      "commentRequired": false,
+      "security": {
+        "type": "KEY_LESS",
+        "configuration": {}
+      },
+      "flows": []
+    }
+  ]
+}

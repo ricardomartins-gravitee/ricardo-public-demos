@@ -1,0 +1,66 @@
+# Demo secrets for the accounts and the seed. Change one in the shell or in this playground's .env.
+x-ai-usage-governance-secrets:
+  apim-password: &apim-password ${RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_APIM_PASSWORD:-admin} # Password of admin in API Management
+  api-key: &api-key ${RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_API_KEY:-ai-usage-governance-demo} # API key of Claude Code developers on the LLM proxy
+
+x-gravitee:
+  kind: playground
+  name: AI Usage Governance
+  category: AI
+  description: Claude Code usage governance through a Gravitee LLM proxy
+  tags: [AI, LLM Proxy, Claude Code, API keys, Analytics]
+  duration: 15 min
+  first_start: 4 min
+  requires:
+    images:
+      APIM_VERSION: "4.12" # Claude Code keeps its own OAuth token and Gravitee reads a separate API key header
+  tested:
+    - APIM_VERSION: "4.13.3"
+      APIM_REGISTRY: graviteeio
+      APIM_GATEWAY_VERSION: "4.13.3-debian"
+      APIM_GATEWAY_REGISTRY: graviteeio
+  consoles:
+    - gamma-ui
+  accounts:
+    - for: "Gamma console"
+      username: admin
+      password: *apim-password
+    - for: "Claude Code developers: API key"
+      key: *api-key
+
+services:
+
+  apim-gateway:
+    ports:
+      - "127.0.0.1:18093:18093" # Edge Reactor, so a daemon on this Mac can register
+
+  ai-usage-governance-seed:
+    image: ghcr.io/gravitee-io-labs/gravitee-lab/seeder:latest
+    build: ../../../../../seeder
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_PULL_POLICY:-build} # build: build it here at each start; never: build it here once; always: pull it, build it here if it cannot be pulled
+    container_name: gio-ai-usage-governance-seed
+    restart: "no"
+    depends_on:
+      apim-management-api:
+        condition: service_healthy
+      apim-gateway:
+        condition: service_healthy
+    volumes:
+      - ./seed:/seed:ro
+      - ./.state:/state # What the seed created, to remove it later
+    environment:
+      APIM_MANAGEMENT_URL: http://apim-management-api:8083
+      APIM_USERNAME: admin
+      APIM_PASSWORD: *apim-password
+      APIM_ENV: ${RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_ENV_ID:-DEFAULT} # API Management environment the playground publishes into
+      APIM_GATEWAY_URL: ${RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_GATEWAY_URL:-http://localhost:8082} # Gateway as a browser on this machine reaches it
+      GATEWAY_INTERNAL_URL: http://apim-gateway:8082 # Gateway as the seed reaches it
+      SEED_WAIT_GATEWAY: "1" # Wait until the gateway serves the LLM proxy before the seed exits
+      GATEWAY_READY_TIMEOUT: ${RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_GATEWAY_READY_TIMEOUT:-300} # Seconds the seed waits for the gateway to serve the API, including the guardrail model download
+      RICARDO_PUBLIC_DEMOS_AI_USAGE_GOVERNANCE_API_KEY: *api-key # API key of Claude Code developers
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434} # Ollama, as the gateway reaches it
+    labels:
+      io.gravitee.name: Playground seed
+      io.gravitee.description: Publishes the Claude Code LLM proxy, its plan, and the Edge configuration
+      io.gravitee.role: seed
+    networks: [internal]
