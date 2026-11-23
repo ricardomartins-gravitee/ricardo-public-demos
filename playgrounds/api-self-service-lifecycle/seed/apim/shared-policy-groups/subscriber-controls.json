@@ -1,0 +1,54 @@
+{
+  "crossId": "shared-services-subscriber-controls",
+  "name": "Subscriber controls",
+  "description": "Reads only, 60 calls a minute, and 5000 calls a day for one subscribed application",
+  "prerequisiteMessage": "Deploy Subscriber controls before the APIs that use it. A call is limited to GET, HEAD and OPTIONS, 60 times a minute and 5000 times a day.",
+  "apiType": "PROXY",
+  "phase": "REQUEST",
+  "steps": [
+    {
+      "name": "Reads only",
+      "description": "Allows GET, HEAD and OPTIONS. Other methods are refused.",
+      "enabled": true,
+      "policy": "resource-filtering",
+      "configuration": {
+        "whitelist": [
+          {
+            "pattern": "/**",
+            "methods": ["GET", "HEAD", "OPTIONS"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "60 calls a minute",
+      "description": "Limits how often one subscribed application may call",
+      "enabled": true,
+      "policy": "rate-limit",
+      "configuration": {
+        "async": false,
+        "addHeaders": true,
+        "rate": {
+          "limit": 60,
+          "periodTime": 1,
+          "periodTimeUnit": "MINUTES"
+        }
+      }
+    },
+    {
+      "name": "5000 calls a day",
+      "description": "Caps how many calls one subscribed application may make in a day",
+      "enabled": true,
+      "policy": "quota",
+      "configuration": {
+        "async": false,
+        "addHeaders": true,
+        "quota": {
+          "limit": 5000,
+          "periodTime": 1,
+          "periodTimeUnit": "DAYS"
+        }
+      }
+    }
+  ]
+}

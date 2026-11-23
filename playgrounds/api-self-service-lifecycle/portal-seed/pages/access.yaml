@@ -1,0 +1,8 @@
+hrid: shared-services-access
+name: Request access
+type: GRAVITEE_MARKDOWN
+area: TOP_NAVBAR
+location: Access
+order: 0
+visibility: PUBLIC
+file: ../content/access.md

@@ -1,0 +1,6 @@
+name: Shared Services caller
+description: Machine client whose access token lasts two minutes
+settings:
+  app:
+    type: SIMPLE
+    client_id: shared-services-caller

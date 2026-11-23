@@ -1,0 +1,6 @@
+hrid: shared-services-home
+name: Home
+type: GRAVITEE_MARKDOWN
+area: HOMEPAGE
+visibility: PUBLIC
+file: ../content/home.md

@@ -8,3 +8,10 @@ x-gravitee-catalog:
   lab: 6   # For older Gravitee Labs: written by catalog.py. Edge configuration needs this level.
   shared_settings: [OLLAMA_URL] # Ollama on this machine, read by the playgrounds that call it
   license: "UNLICENSED"
+  images: ghcr.io/ricardomartins-gravitee/ricardo-public-demos
+  requires:
+    catalogs:
+      gravitee:
+        name: "Gravitee public"
+        url: https://github.com/gravitee-io-labs/gravitee-lab-public-catalog.git
+        min: 1.5.0

@@ -1,0 +1,5 @@
+hrid: shared-services-catalog
+apis:
+  - {apiHrid: "${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID}-shared-services", location: Catalog, order: 0, visibility: PUBLIC}
+  - {apiHrid: "${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID}-shared-services-v2", location: Catalog, order: 1, visibility: PUBLIC}
+  - {apiHrid: "${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID}-platform-notices", location: Catalog, order: 2, visibility: PUBLIC}

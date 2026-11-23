@@ -1,0 +1,240 @@
+{
+  "api": {
+    "id": "b7e1c0de-5e1f-4a11-9c0e-000000000001",
+    "definitionVersion": "V4",
+    "type": "PROXY",
+    "name": "Shared Services API",
+    "apiVersion": "1.0",
+    "description": "Catalog of shared platform services, published for approved applications",
+    "crossId": "${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID}-shared-services",
+    "state": "STARTED",
+    "lifecycleState": "PUBLISHED",
+    "visibility": "PUBLIC",
+    "labels": [
+      "shared-services"
+    ],
+    "tags": [],
+    "flowExecution": {
+      "mode": "DEFAULT",
+      "matchRequired": false
+    },
+    "analytics": {
+      "enabled": true
+    },
+    "flows": [],
+    "listeners": [
+      {
+        "type": "HTTP",
+        "paths": [
+          {
+            "path": "/shared-services/",
+            "overrideAccess": false
+          }
+        ],
+        "pathMappings": [],
+        "cors": {
+          "enabled": true,
+          "allowCredentials": false,
+          "allowOrigin": ["http://localhost:8085", "http://127.0.0.1:8085"],
+          "allowMethods": ["GET", "HEAD", "OPTIONS"],
+          "allowHeaders": ["X-Gravitee-Api-Key", "Accept", "Content-Type", "Authorization"],
+          "exposeHeaders": ["X-Rate-Limit-Remaining", "X-Quota-Remaining", "X-Shared-Services"],
+          "maxAge": 3600,
+          "runPolicies": false,
+          "allowPrivateNetwork": false
+        },
+        "entrypoints": [
+          {
+            "type": "http-proxy",
+            "qos": "AUTO",
+            "configuration": {}
+          }
+        ]
+      }
+    ],
+    "endpointGroups": [
+      {
+        "name": "default-group",
+        "type": "http-proxy",
+        "loadBalancer": {
+          "type": "ROUND_ROBIN"
+        },
+        "sharedConfiguration": "{\"http\": {\"version\": \"HTTP_1_1\", \"connectTimeout\": 3000, \"readTimeout\": 10000, \"idleTimeout\": 60000, \"maxConcurrentConnections\": 20, \"keepAlive\": true, \"keepAliveTimeout\": 30000, \"pipelining\": false, \"useCompression\": true, \"followRedirects\": false, \"propagateClientAcceptEncoding\": false, \"propagateClientHost\": false}, \"proxy\": {\"enabled\": false, \"useSystemProxy\": false}, \"ssl\": {\"trustAll\": false, \"hostnameVerifier\": true, \"trustStore\": {\"type\": \"\"}, \"keyStore\": {\"type\": \"\"}}}",
+        "services": {},
+        "endpoints": [
+          {
+            "name": "shared-services",
+            "type": "http-proxy",
+            "weight": 1,
+            "inheritConfiguration": true,
+            "secondary": false,
+            "tenants": [],
+            "configuration": {
+              "target": "${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_BACKEND_URL}"
+            },
+            "services": {}
+          }
+        ]
+      }
+    ],
+    "resources": [
+      {
+        "name": "shared-services-am",
+        "type": "oauth2-am-resource",
+        "enabled": true,
+        "configuration": {
+          "mode": "INTROSPECTION",
+          "serverURL": "http://am-gateway:8092",
+          "version": "V3_X",
+          "securityDomain": "shared-services",
+          "clientId": "shared-services-caller",
+          "clientSecret": "${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOKEN_SECRET:-shared-services-token}",
+          "userClaim": "sub"
+        }
+      }
+    ]
+  },
+  "plans": [
+    {
+      "definitionVersion": "V4",
+      "name": "API Key",
+      "description": "Application API key, approved by the service owner",
+      "mode": "STANDARD",
+      "type": "API",
+      "status": "PUBLISHED",
+      "validation": "MANUAL",
+      "order": 1,
+      "tags": [],
+      "characteristics": [
+        "Independent API key",
+        "Administrator approval"
+      ],
+      "excludedGroups": [],
+      "commentRequired": false,
+      "flows": [
+        {
+          "name": "Subscriber controls",
+          "enabled": true,
+          "selectors": [
+            {
+              "type": "HTTP",
+              "path": "/",
+              "pathOperator": "STARTS_WITH"
+            }
+          ],
+          "request": [
+            {
+              "name": "Subscriber controls",
+              "description": "The shared policy group: reads only, 60 calls a minute, and 5000 calls a day",
+              "enabled": true,
+              "policy": "shared-policy-group-policy",
+              "configuration": {
+                "sharedPolicyGroupCrossId": "shared-services-subscriber-controls"
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "Stamp the response",
+              "description": "Adds X-Shared-Services so a caller can see the gateway accepted the call",
+              "enabled": true,
+              "policy": "transform-headers",
+              "configuration": {
+                "scope": "RESPONSE",
+                "addHeaders": [
+                  {
+                    "name": "X-Shared-Services",
+                    "value": "accepted"
+                  }
+                ]
+              }
+            }
+          ],
+          "subscribe": [],
+          "publish": []
+        }
+      ],
+      "security": {
+        "type": "API_KEY",
+        "configuration": {}
+      }
+    },
+    {
+      "definitionVersion": "V4",
+      "name": "Access token",
+      "description": "Access token from Access Management, valid for two minutes",
+      "mode": "STANDARD",
+      "type": "API",
+      "status": "PUBLISHED",
+      "validation": "AUTO",
+      "order": 2,
+      "tags": [],
+      "characteristics": [
+        "Two minute access token",
+        "Scope shared-services"
+      ],
+      "excludedGroups": [],
+      "commentRequired": false,
+      "flows": [
+        {
+          "name": "Subscriber controls",
+          "enabled": true,
+          "selectors": [
+            {
+              "type": "HTTP",
+              "path": "/",
+              "pathOperator": "STARTS_WITH"
+            }
+          ],
+          "request": [
+            {
+              "name": "Subscriber controls",
+              "description": "The shared policy group: reads only, 60 calls a minute, and 5000 calls a day",
+              "enabled": true,
+              "policy": "shared-policy-group-policy",
+              "configuration": {
+                "sharedPolicyGroupCrossId": "shared-services-subscriber-controls"
+              }
+            }
+          ],
+          "response": [
+            {
+              "name": "Stamp the response",
+              "description": "Adds X-Shared-Services so a caller can see the gateway accepted the call",
+              "enabled": true,
+              "policy": "transform-headers",
+              "configuration": {
+                "scope": "RESPONSE",
+                "addHeaders": [
+                  {
+                    "name": "X-Shared-Services",
+                    "value": "accepted"
+                  }
+                ]
+              }
+            }
+          ],
+          "subscribe": [],
+          "publish": []
+        }
+      ],
+      "security": {
+        "type": "OAUTH2",
+        "configuration": {
+          "oauthResource": "shared-services-am",
+          "extractPayload": true,
+          "checkRequiredScopes": true,
+          "requiredScopes": ["shared-services"],
+          "modeStrict": true,
+          "propagateAuthHeader": false
+        }
+      }
+    }
+  ],
+  "x-gravitee": {
+    "primaryOwner": {
+      "source": "memory",
+      "sourceId": "api1"
+    }
+  }
+}

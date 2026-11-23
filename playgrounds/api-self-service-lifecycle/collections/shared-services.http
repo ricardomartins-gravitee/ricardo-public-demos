@@ -1,0 +1,25 @@
+# Shared Services API calls for API Self-Service & Credential Lifecycle.
+# consumerKey: copy it from Consumer App A's subscription after you accept it.
+# revokedKey: paste a key after you revoke it in the Gamma console.
+# Keep real key values out of this file.
+
+### Backend health
+GET http://localhost:8140/v1/health
+
+### Backend service list
+GET http://localhost:8140/v1/services
+
+### Gateway list without a key
+GET http://localhost:8082/shared-services/v1/services
+
+### Gateway list with the Consumer App A key
+GET http://localhost:8082/shared-services/v1/services
+X-Gravitee-Api-Key: {{consumerKey}}
+
+### Gateway get service-001 with the Consumer App A key
+GET http://localhost:8082/shared-services/v1/services/service-001
+X-Gravitee-Api-Key: {{consumerKey}}
+
+### Gateway list with a revoked key
+GET http://localhost:8082/shared-services/v1/services
+X-Gravitee-Api-Key: {{revokedKey}}

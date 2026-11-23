@@ -1,0 +1,142 @@
+# Demo secrets for the accounts and the seed. Change one in the shell or in this playground's .env.
+x-api-self-service-lifecycle-secrets:
+  apim-password: &apim-password ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_APIM_PASSWORD:-admin} # Password of admin in API Management
+  owner-password: &owner-password ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_OWNER_PASSWORD:-api1} # Password of the platform user named api1, who acts as Service owner
+  developer-password: &developer-password ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_DEVELOPER_A_PASSWORD:-password} # Password of the platform user named user, who acts as Developer
+  agent-key: &agent-key ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_AGENT_KEY:-shared-services-audit-agent} # API key of Audit agent
+  tool-key: &tool-key ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOOL_KEY:-shared-services-tool-caller} # API key Gravitee uses when a tool calls the Shared Services API
+  am-password: &am-password ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_AM_PASSWORD:-adminadmin} # Password of admin in Access Management
+  token-secret: &token-secret ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOKEN_SECRET:-shared-services-token} # Secret of the Shared Services caller application in Access Management
+
+x-gravitee:
+  kind: playground
+  name: "API Self-Service Lifecycle"
+  category: API
+  description: Developer self-service for a shared REST API, then that API as tools for an approved agent
+  tags: [API Management, Developer Portal, API keys, Subscriptions, Self-service, MCP]
+  duration: 25 min
+  first_start: 6 min
+  requires:
+    images:
+      APIM_VERSION: "4.13"
+      AM_VERSION: "4.13"
+    license:
+      - gamma-aim-module
+      - gamma-aim-entrypoint-mcp-studio
+      - gamma-aim-endpoint-tools-http
+  consoles:
+    - gamma-ui
+    - call-stage-ui
+    - console: apim-portal-ui
+      as: user
+    - mcp-inspector
+    - am-management-ui
+  accounts:
+    - for: "Gamma console: Platform administrator"
+      username: admin
+      password: *apim-password
+    - for: "Gamma console: Service owner"
+      username: api1
+      password: *owner-password
+    - for: "Developer Portal: Developer"
+      username: user
+      password: *developer-password
+    - for: "Audit agent: API key"
+      key: *agent-key
+    - for: "AM Console"
+      username: admin
+      password: *am-password
+    - for: "Shared Services caller: client secret"
+      key: *token-secret
+
+include:
+  - ../../addons/call-stage/compose.yml
+  - ../../../gravitee/addons/mcpjam-inspector/compose.yml # Client for the tool endpoint
+
+services:
+
+  mcp-inspector:
+    environment:
+      NODE_OPTIONS: --require /opt/lab-frame-ancestors.cjs # Lets the Lab UI on port 9000 frame this console
+    volumes:
+      - ./scripts/lab-frame-ancestors.cjs:/opt/lab-frame-ancestors.cjs:ro
+
+  api-self-service-lifecycle-api:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/api-self-service-lifecycle-api:latest
+    build: ./apps/shared-services
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_PULL_POLICY:-build} # build: build it here at each start; always: pull it, build it here if it cannot be pulled
+    container_name: gio-api-self-service-lifecycle-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8140:8000" # Shared Services API
+    environment:
+      HTTP_PORT: "8000"
+    labels:
+      io.gravitee.name: Shared Services API
+      io.gravitee.description: The shared REST API published through the gateway
+      io.gravitee.group: API Management
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
+
+  api-self-service-lifecycle-seed:
+    image: ghcr.io/gravitee-io-labs/gravitee-lab/seeder:latest
+    build: ../../../../../seeder
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_PULL_POLICY:-build}
+    container_name: gio-api-self-service-lifecycle-seed
+    restart: "no"
+    depends_on:
+      apim-management-api:
+        condition: service_healthy
+      am-management-api:
+        condition: service_healthy
+      am-gateway:
+        condition: service_healthy
+      api-self-service-lifecycle-api:
+        condition: service_healthy
+    volumes:
+      - ./seed/apim/apis:/seed/apim/apis:ro
+      - ./seed/apim/shared-policy-groups:/seed/apim/shared-policy-groups:ro # Subscriber controls, reused by the shared APIs
+      - ./seed/apim/applications:/seed/apim/applications:ro
+      - ./seed/apim/subscriptions:/seed/apim/subscriptions:ro
+      - ./seed/apim/settings.yaml:/seed/apim/settings.yaml:ro
+      - ./seed/aim/api-tools:/seed/aim/api-tools:ro
+      - ./seed/aim/studios:/seed/aim/studios:ro
+      - ./portal-seed:/seed/apim/portal:ro # Developer Portal content the seeder reads; kept beside seed/ because this Lab's contract does not list that folder
+      - ./seed/am:/seed/am:ro # Access Management domain and the short-lived caller
+      - ./.state:/state # What the seed created, to remove it later
+    environment:
+      APIM_MANAGEMENT_URL: http://apim-management-api:8083
+      APIM_USERNAME: admin
+      APIM_PASSWORD: *apim-password
+      APIM_ENV: ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID:-DEFAULT} # API Management environment the playground publishes into
+      APIM_GATEWAY_URL: http://localhost:8082
+      GATEWAY_INTERNAL_URL: http://apim-gateway:8082
+      RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID: ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID:-DEFAULT}
+      RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_BACKEND_URL: http://api-self-service-lifecycle-api:8000 # Shared Services API as the gateway reaches it
+      RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_AGENT_KEY: *agent-key # API key of Audit agent
+      RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOOL_KEY: *tool-key # API key Gravitee uses when a tool calls the Shared Services API
+      AM_MANAGEMENT_URL: http://am-management-api:8093 # Access Management the seed writes the domain to
+      AM_USERNAME: admin # User the seed signs in as
+      AM_PASSWORD: *am-password # Password of that user
+      AM_GATEWAY_URL: http://am-gateway:8092 # Access Management gateway the seed waits for
+      RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOKEN_SECRET: *token-secret # Secret of the Shared Services caller application
+    labels:
+      io.gravitee.name: Playground seed
+      io.gravitee.description: Creates the shared APIs, the subscriber controls, the tool endpoint, the developer portal and the short-lived caller
+      io.gravitee.group: API Management
+      io.gravitee.role: seed
+    networks: [internal]
+
+  call-stage-ui:
+    environment:
+      CALL_STAGE_MANAGEMENT_URL: http://apim-management-api:8083 # Management API this page reads a call's log from
+      CALL_STAGE_MANAGEMENT_USERNAME: admin # User the page uses to read that log
+      CALL_STAGE_MANAGEMENT_PASSWORD: *apim-password # Password of that user
+      CALL_STAGE_MANAGEMENT_ENV: ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID:-DEFAULT} # Environment the log is read from
+      RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOKEN_SECRET: *token-secret # Secret Access Management uses for the short-lived caller
+    volumes:
+      - ./call-stage/calls.json:/app/calls.json:ro # The buttons this playground shows

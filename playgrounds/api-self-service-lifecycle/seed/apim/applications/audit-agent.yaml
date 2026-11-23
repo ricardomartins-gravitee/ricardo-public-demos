@@ -1,0 +1,5 @@
+name: Audit agent
+description: Agent that calls Shared Services through the tool endpoint
+settings:
+  app:
+    type: SIMPLE

@@ -1,0 +1,5 @@
+api: Shared Services API
+operations:
+  - listServices
+  - getService
+  - getHealth
