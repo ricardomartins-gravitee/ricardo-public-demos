@@ -1,0 +1,69 @@
+name: Upstream catalog dependency proof
+
+on:
+  push:
+    branches: [validation/upstream-pr101-20261123]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Check and index a dependent catalog
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: catalog
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ricardomartins-gravitee/gravitee-lab
+          ref: 5b3335f0f120469aae11fec67c5aaad019f51dbe
+          path: lab
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.15"
+      - uses: ./lab/.github/actions/compose
+      - name: Fetch public catalog dependencies without a key
+        run: python3 -I lab/lab-ui/catalog.py ci needs catalog/validation/dependency-fixture
+      - name: Check the real dependent catalog
+        run: python3 -I lab/lab-ui/catalog.py check catalog/validation/dependency-fixture --ci
+      - name: Build its index with the external include resolved
+        run: python3 -I lab/lab-ui/catalog.py index catalog/validation/dependency-fixture --out catalog-index.json
+
+  compose:
+    name: Start the externally included OpenFGA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: catalog
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ricardomartins-gravitee/gravitee-lab
+          ref: 5b3335f0f120469aae11fec67c5aaad019f51dbe
+          path: lab
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.15"
+      - uses: ./lab/.github/actions/compose
+      - name: Fetch dependencies on this fresh runner too
+        run: python3 -I lab/lab-ui/catalog.py ci needs catalog/validation/dependency-fixture
+      - name: Link the dependent catalog into the Lab
+        run: python3 -I lab/lab-ui/catalog.py link catalog/validation/dependency-fixture
+      - name: Exercise the dependency through standard Compose
+        shell: bash
+        run: |
+          proof_project="dependency-proof-$GITHUB_RUN_ID"
+          test -z "$(docker ps -aq --filter "label=com.docker.compose.project=$proof_project")"
+          compose=(docker compose -p "$proof_project" -f lab/docker-compose.yml -f lab/.lab/catalogs/dependency-proof/setups/dependency-proof.yml)
+          trap '"${compose[@]}" down --volumes --remove-orphans' EXIT
+          "${compose[@]}" config --quiet
+          "${compose[@]}" up --detach --wait openfga
+          curl --fail --retry 10 --retry-delay 2 http://127.0.0.1:8180/healthz

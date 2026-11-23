@@ -1,0 +1,15 @@
+# What the Lab reads to show this catalog. Raise the version with make release when items change in a way people should notice.
+x-gravitee-catalog:
+  schema: 1   # For older Gravitee Labs: written by catalog.py
+  id: "dependency-proof"
+  name: "Catalog dependency proof"
+  description: "Cross-catalog includes on fresh CI runners"
+  version: 0.1.0
+  lab: 1   # For older Gravitee Labs: written by catalog.py
+  license: "Apache-2.0"
+  requires:
+    catalogs:
+      gravitee:
+        name: Gravitee public
+        url: https://github.com/gravitee-io-labs/gravitee-lab-public-catalog.git
+        min: 1.5.0

@@ -1,0 +1,18 @@
+{
+  "form": "inline",
+  "lab": {
+    "ref": "b98b9c848b37b1498c166ca448bfa3afaf9c7051",
+    "repository": "gravitee-io-labs/gravitee-lab"
+  },
+  "platforms": [
+    "linux/amd64"
+  ],
+  "standard": 12,
+  "needs": {
+    "gravitee": {
+      "repository": "gravitee-io-labs/gravitee-lab-public-catalog",
+      "ref": "6b5d9e9e23cf6d083d3cc9dd9c317e26d9f9619d",
+      "public": true
+    }
+  }
+}

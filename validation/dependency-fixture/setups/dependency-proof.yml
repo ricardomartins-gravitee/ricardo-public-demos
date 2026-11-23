@@ -1,0 +1,7 @@
+include:
+  - ../../gravitee/addons/openfga/compose.yml
+x-gravitee:
+  kind: setup
+  name: Dependency proof
+  description: OpenFGA from the required public catalog
+  category: Other
