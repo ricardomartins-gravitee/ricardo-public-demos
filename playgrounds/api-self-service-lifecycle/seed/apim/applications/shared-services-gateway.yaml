@@ -1,0 +1,5 @@
+name: Shared Services gateway
+description: Application Gravitee uses when a tool calls the Shared Services API
+settings:
+  app:
+    type: SIMPLE

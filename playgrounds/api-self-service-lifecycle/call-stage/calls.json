@@ -1,0 +1,44 @@
+{
+  "title": "Shared Services",
+  "calls": [
+    {
+      "id": "backend",
+      "name": "Backend",
+      "method": "GET",
+      "url": "http://api-self-service-lifecycle-api:8000/v1/services",
+      "show": "http://localhost:8140/v1/services"
+    },
+    {
+      "id": "no-key",
+      "name": "No key",
+      "method": "GET",
+      "url": "http://apim-gateway:8082/shared-services/v1/services",
+      "show": "http://localhost:8082/shared-services/v1/services"
+    },
+    {
+      "id": "with-key",
+      "panel": "Authorization",
+      "name": "With a key",
+      "method": "GET",
+      "url": "http://apim-gateway:8082/shared-services/v1/services",
+      "show": "http://localhost:8082/shared-services/v1/services",
+      "keyFrom": "input",
+      "keyHeader": "X-Gravitee-Api-Key"
+    },
+    {
+      "id": "with-token",
+      "panel": "Access token",
+      "name": "With a token",
+      "hint": "Access Management issues a token that lasts two minutes. This call asks for one and sends it.",
+      "method": "GET",
+      "url": "http://apim-gateway:8082/shared-services/v1/services",
+      "show": "http://localhost:8082/shared-services/v1/services",
+      "token": {
+        "url": "http://am-gateway:8092/shared-services/oauth/token",
+        "clientId": "shared-services-caller",
+        "clientSecret": "${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOKEN_SECRET}",
+        "scope": "shared-services"
+      }
+    }
+  ]
+}

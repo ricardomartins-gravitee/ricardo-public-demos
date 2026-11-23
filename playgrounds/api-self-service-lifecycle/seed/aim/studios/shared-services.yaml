@@ -1,0 +1,61 @@
+name: Shared Services tools
+description: List and read shared services, for an approved agent
+primaryOwner:
+  source: memory
+  sourceId: api1
+contextPath: /shared-services-tools/
+supportedProtocolVersions: ["2025-11-25", "2026-07-28"]
+fga: false
+plan:
+  name: Agent
+  security:
+    type: API_KEY
+    configuration: {}
+tools:
+  - {api: Shared Services API, tool: listServices}
+  - {api: Shared Services API, tool: getService}
+upstreamAuth:
+  - api: Shared Services API
+    type: api-key
+    apiKeyHeader: X-Gravitee-Api-Key
+    apiKey: '${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOOL_KEY}'
+flows:
+  - name: Guardrails
+    enabled: true
+    selectors: [{type: MCP, methods: [tools/call]}]
+    request:
+      - name: 30 calls a minute
+        description: Limits how often an agent may call a tool
+        enabled: true
+        policy: rate-limit
+        configuration:
+          async: false
+          addHeaders: true
+          rate: {limit: 30, periodTime: 1, periodTimeUnit: MINUTES}
+      - name: 500 calls a day
+        description: Caps how many tool calls an agent may make in a day
+        enabled: true
+        policy: quota
+        configuration:
+          async: false
+          addHeaders: true
+          quota: {limit: 500, periodTime: 1, periodTimeUnit: DAYS}
+      - name: 32 KB request
+        description: Refuses a tool call whose body is larger than 32 KB
+        enabled: true
+        policy: request-content-limit
+        configuration: {limit: 32768}
+    response:
+      - name: Stamp the response
+        description: Adds X-Shared-Services so a caller can see the gateway accepted the tool call
+        enabled: true
+        policy: transform-headers
+        configuration:
+          scope: RESPONSE
+          addHeaders: [{name: X-Shared-Services, value: accepted}]
+    subscribe: []
+    publish: []
+subscriptions:
+  - application: Audit agent
+    plan: Agent
+    apiKey: '${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_AGENT_KEY}'

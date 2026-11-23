@@ -1,0 +1,7 @@
+portalNext:
+  access:
+    enabled: true
+plan:
+  security:
+    customApiKey:
+      enabled: true

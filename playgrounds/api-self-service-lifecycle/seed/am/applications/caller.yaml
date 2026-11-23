@@ -1,0 +1,15 @@
+name: Shared Services caller
+description: Machine client whose access token lasts two minutes
+type: SERVICE
+clientId: shared-services-caller
+clientSecret: ${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOKEN_SECRET:-shared-services-token}
+scopes:
+  - shared-services
+oauth:
+  grantTypes:
+    - client_credentials
+  tokenEndpointAuthMethod: client_secret_basic
+  tokenValidity:
+    accessToken: 120
+    refreshToken: 120
+    idToken: 120

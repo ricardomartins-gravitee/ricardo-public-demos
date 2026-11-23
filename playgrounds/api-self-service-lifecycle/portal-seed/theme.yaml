@@ -1,0 +1,10 @@
+hrid: shared-services-theme
+name: Shared Services
+definition:
+  color:
+    primary: "#1F2A44"
+    secondary: "#5B6B8C"
+    pageBackground: "#F4F6F8"
+    cardBackground: "#FFFFFF"
+  font:
+    fontFamily: "Helvetica, Arial, sans-serif"

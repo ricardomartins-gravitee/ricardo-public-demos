@@ -1,0 +1,27 @@
+x-gravitee:
+  kind: addon
+  name: "Call Stage"
+  category: API
+  description: Page that sends configured HTTP calls and shows the path of each one
+
+services:
+
+  call-stage-ui:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/call-stage-ui:latest
+    build: ./app
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_CALL_STAGE_PULL_POLICY:-always} # always: pull the published image, and build it here if the pull is refused; build: build it here at each start
+    container_name: gio-call-stage-ui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8155:8080" # Call stage page
+    labels:
+      io.gravitee.name: Call Stage
+      io.gravitee.description: Sends the configured calls and shows the path of each one
+      io.gravitee.console.call-stage.name: Call Stage
+      io.gravitee.console.call-stage.url: http://localhost:8155
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [internal]
