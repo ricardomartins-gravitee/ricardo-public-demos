@@ -1,8 +1,15 @@
 {
   "form": "inline",
   "lab": {
-    "ref": "97bbec2ec979bd72943af1f9244736bbcb8b200a",
+    "ref": "2dbe6ed49f151ed4145c8f77f58731cdef8c617e",
     "repository": "ricardomartins-gravitee/gravitee-lab"
+  },
+  "needs": {
+    "gravitee": {
+      "public": true,
+      "ref": "6b5d9e9e23cf6d083d3cc9dd9c317e26d9f9619d",
+      "repository": "gravitee-io-labs/gravitee-lab-public-catalog"
+    }
   },
   "platforms": [
     "linux/amd64"

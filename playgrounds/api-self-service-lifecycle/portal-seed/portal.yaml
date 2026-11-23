@@ -1,0 +1,7 @@
+hrid: shared-services-portal
+name: Shared Services
+activeThemeHrid: shared-services-theme
+structure:
+  topNavbar:
+    - {path: Catalog, visibility: PUBLIC}
+    - {path: Access, visibility: PUBLIC}

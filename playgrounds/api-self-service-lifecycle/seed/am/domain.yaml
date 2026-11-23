@@ -1,0 +1,6 @@
+name: Shared Services
+description: Callers of the Shared Services API
+scopes:
+  - key: shared-services
+    name: Shared Services
+    description: Call the Shared Services API

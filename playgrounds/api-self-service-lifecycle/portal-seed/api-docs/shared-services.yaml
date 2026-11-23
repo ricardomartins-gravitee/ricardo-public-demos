@@ -1,0 +1,130 @@
+openapi: "3.0.3"
+info:
+  title: Shared Services API
+  version: "1.0.0"
+  description: Catalog of shared platform services, published for approved applications.
+servers:
+  - url: "${APIM_GATEWAY_URL}/shared-services"
+    description: Gravitee Gateway
+security:
+  - ApiKey: []
+  - OAuth2: []
+paths:
+  /v1/services:
+    get:
+      summary: List shared services
+      operationId: listServices
+      responses:
+        "200":
+          description: The catalog of shared services.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceList"
+              example:
+                count: 1
+                services:
+                  - id: service-001
+                    name: Reporting Service
+                    status: operational
+                    category: shared-services
+  /v1/services/{id}:
+    get:
+      summary: Read one shared service
+      operationId: getService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Service id.
+          schema:
+            type: string
+          example: service-001
+      responses:
+        "200":
+          description: The service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+              example:
+                id: service-001
+                name: Reporting Service
+                status: operational
+                category: shared-services
+        "404":
+          description: No service has this id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: not_found
+  /v1/health:
+    get:
+      summary: Health
+      operationId: getHealth
+      responses:
+        "200":
+          description: The API is up.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+              example:
+                status: ok
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-Gravitee-Api-Key
+    OAuth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:8092/shared-services/oauth/token
+          scopes:
+            shared-services: Call the Shared Services API
+  schemas:
+    Service:
+      type: object
+      required: [id, name, status, category]
+      properties:
+        id:
+          type: string
+          example: service-001
+        name:
+          type: string
+          example: Reporting Service
+        status:
+          type: string
+          example: operational
+        category:
+          type: string
+          example: shared-services
+    ServiceList:
+      type: object
+      required: [count, services]
+      properties:
+        count:
+          type: integer
+          example: 1
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: not_found
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok

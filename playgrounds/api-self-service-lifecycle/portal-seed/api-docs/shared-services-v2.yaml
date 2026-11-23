@@ -1,0 +1,100 @@
+openapi: "3.0.3"
+info:
+  title: Shared Services API
+  version: "2.0.0"
+  description: Version 2.0 of the shared platform catalog. Version 1.0 stays published. Each service includes the channel a caller uses.
+servers:
+  - url: "${APIM_GATEWAY_URL}/shared-services-v2"
+    description: Gravitee Gateway
+security:
+  - ApiKey: []
+paths:
+  /v2/services:
+    get:
+      summary: List shared services
+      operationId: listServices
+      responses:
+        "200":
+          description: The catalog of shared services.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceList"
+              example:
+                count: 1
+                services:
+                  - id: service-001
+                    name: Reporting Service
+                    status: operational
+                    category: shared-services
+                    channel: reports
+  /v2/services/{id}:
+    get:
+      summary: Read one shared service
+      operationId: getService
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Service id.
+          schema:
+            type: string
+          example: service-001
+      responses:
+        "200":
+          description: The service.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+              example:
+                id: service-001
+                name: Reporting Service
+                status: operational
+                category: shared-services
+                channel: reports
+        "404":
+          description: No service has this id.
+  /v2/health:
+    get:
+      summary: Health
+      operationId: getHealth
+      responses:
+        "200":
+          description: The API is up.
+          content:
+            application/json:
+              example:
+                status: ok
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-Gravitee-Api-Key
+  schemas:
+    Service:
+      type: object
+      required: [id, name, status, category, channel]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        category:
+          type: string
+        channel:
+          type: string
+          description: How a caller reaches the service.
+    ServiceList:
+      type: object
+      required: [count, services]
+      properties:
+        count:
+          type: integer
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/Service"

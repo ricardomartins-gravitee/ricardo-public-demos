@@ -1,0 +1,56 @@
+openapi: "3.0.3"
+info:
+  title: Platform Notices API
+  version: "1.0.0"
+  description: Operational notices for the shared platform, published for approved applications.
+servers:
+  - url: "${APIM_GATEWAY_URL}/platform-notices"
+    description: Gravitee Gateway
+security:
+  - ApiKey: []
+paths:
+  /v1/notices:
+    get:
+      summary: List platform notices
+      operationId: listNotices
+      responses:
+        "200":
+          description: The operational notices.
+          content:
+            application/json:
+              example:
+                count: 1
+                notices:
+                  - id: notice-001
+                    title: Directory Service is degraded
+                    status: active
+                    service: service-003
+  /v1/notices/{id}:
+    get:
+      summary: Read one platform notice
+      operationId: getNotice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: notice-001
+      responses:
+        "200":
+          description: The notice.
+          content:
+            application/json:
+              example:
+                id: notice-001
+                title: Directory Service is degraded
+                status: active
+                service: service-003
+        "404":
+          description: No notice has this id.
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-Gravitee-Api-Key

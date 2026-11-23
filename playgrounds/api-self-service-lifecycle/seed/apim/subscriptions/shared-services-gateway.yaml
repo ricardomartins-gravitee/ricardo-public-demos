@@ -1,0 +1,8 @@
+subscriptions:
+  - application: Shared Services gateway
+    api: Shared Services API
+    plan: API Key
+    apiKey: '${RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOOL_KEY}'
+  - application: Shared Services caller
+    api: Shared Services API
+    plan: Access token

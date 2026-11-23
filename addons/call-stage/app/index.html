@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Call stage</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <strong>Gravitee</strong>
+      <span class="sep"></span>
+      <h1 id="title">Call stage</h1>
+    </div>
+    <div class="live" id="live">
+      <span class="pulse"></span>
+      <span id="live-label">Choose a call</span>
+    </div>
+  </header>
+  <div class="tabs-bar">
+    <div id="tabs" class="tabs" role="tablist"></div>
+    <div class="run">
+      <label class="slow"><input id="slow" type="checkbox" checked> Slow draw</label>
+      <button type="button" id="draw" disabled>Call</button>
+    </div>
+  </div>
+  <div class="panel" id="panel">
+    <div class="panel-inner" id="panel-body"></div>
+  </div>
+  <div class="workspace">
+    <button type="button" class="edge edge-left" id="history-toggle" aria-pressed="false" title="History">
+      <span class="edge-label">History</span>
+    </button>
+    <aside class="history" id="history" hidden>
+      <div class="history-top">
+        <h2>History</h2>
+        <button type="button" id="history-close">Close</button>
+      </div>
+      <div id="history-list"></div>
+    </aside>
+    <div class="stage-column">
+      <div class="lanes" id="lanes"></div>
+      <div class="graph" id="graph">
+        <div class="canvas">
+          <div class="guides" id="guides"></div>
+          <p class="empty" id="empty">Choose a call, then press Call.</p>
+          <div class="sequence" id="sequence"></div>
+        </div>
+      </div>
+    </div>
+    <section class="network" id="network" hidden>
+      <div class="network-log">
+        <div class="network-head" aria-hidden="true">
+          <span>Name</span>
+          <span>Status</span>
+          <span>Time</span>
+          <span id="network-scale">Waterfall</span>
+        </div>
+        <div id="network-rows"></div>
+      </div>
+      <aside class="network-detail" id="network-detail">
+        <p class="network-hint">Select a call.</p>
+      </aside>
+    </section>
+    <button type="button" class="edge edge-bottom" id="network-toggle" aria-pressed="false" title="Network">
+      <span class="edge-label">Network</span>
+    </button>
+  </div>
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-top">
+        <h2 id="modal-title">Call</h2>
+        <button type="button" id="modal-close" aria-label="Close">Close</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
