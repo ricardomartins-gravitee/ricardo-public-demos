@@ -1,6 +1,6 @@
 # API Self-Service & Credential Lifecycle
 
-Developer self-service for one shared REST API, then the same API as tools for an approved agent. The developer creates an application in the Developer Portal and requests an API key. The service owner approves it. After that, MCPJam Inspector calls the tool endpoint.
+Developer self-service for one shared REST API, then the same API as tools for an approved agent. The developer creates an application in the Developer Portal and requests an API key. The service owner approves it, and can revoke it. The same API also accepts a token that lasts two minutes. After that, MCPJam Inspector calls the tool endpoint.
 
 The playground publishes into the platform DEFAULT environment and its Developer Portal. Before starting it, stop another playground that publishes into that same portal with **Delete what it created**.
 
@@ -14,16 +14,15 @@ Revoke, renew, and expiration are separate operations:
 
 ## What it teaches
 
-- How a shared REST API is published on the gateway with an API Key plan that waits for approval.
+- How a shared REST API is published on the gateway with an API Key plan that waits for approval, and how a call with no key is refused.
 - How the developer finds that API in the Developer Portal, reads its OpenAPI page, and tries a call from that page once the service owner has approved a key.
 - How the developer creates Consumer App A and requests a subscription.
 - How the service owner, the built-in user `api1`, approves the subscription and how the platform issues the key. Another team owns its own API, and this sign-in is refused that API. That part is said during the approval. The platform administrator can open every API.
-- How a subscribed application is limited: reads only, 60 calls a minute, and 5000 calls a day. Those controls are one shared policy group. Shared Services API 1.0, Shared Services API 2.0, and Platform Notices API all use it. Version 1.0 stays published while 2.0 adds `channel`.
 - How Consumer App A calls the API with that key.
-- How revoking Consumer App A's key rejects the next call.
-- How consumption shows that application's traffic.
+- How revoking Consumer App A's key rejects the next call, and how consumption shows that application's traffic.
+- How Access Management issues a token that lasts two minutes, and how the Access token plan on the same API asks Access Management whether that token is still valid. The plan requires the scope `shared-services`.
+- How a subscribed application is limited: reads only, 60 calls a minute, and 5000 calls a day. Those controls are one shared policy group. Shared Services API 1.0, Shared Services API 2.0, and Platform Notices API all use it. Version 1.0 stays published while 2.0 adds `channel`.
 - How an approved agent calls the same API as tools, with a rate limit, a daily quota, a request size limit and a response stamp, and how a tool that was not granted is refused.
-- How Access Management issues a token that lasts two minutes, and how the Access token plan on Shared Services API asks Access Management whether that token is still valid. The plan requires the scope `shared-services`.
 
 ## Prerequisites
 
@@ -62,7 +61,7 @@ Set a value in the playground's settings, or in the shell, before the first star
 | Tool endpoint | http://localhost:8082/shared-services-tools/ |
 | Shared Services API | http://localhost:8140/v1/services |
 
-Follow `guide.md` beside the consoles. Each lesson links to the console it uses, and that link opens in the matching tab. The Call stage tab sends the REST calls and draws the path of each one. MCPJam Inspector calls the tool endpoint. The eight lessons take about 22 minutes.
+Follow `guide.md` beside the consoles. Each lesson links to the console it uses, and that link opens in the matching tab. The Call Stage tab sends the REST calls and draws the path of each one. MCPJam Inspector calls the tool endpoint. The pass takes about 25 minutes.
 
 ## Accounts
 
