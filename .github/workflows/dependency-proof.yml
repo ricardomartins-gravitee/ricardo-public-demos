@@ -62,7 +62,8 @@ jobs:
         run: |
           proof_project="dependency-proof-$GITHUB_RUN_ID"
           test -z "$(docker ps -aq --filter "label=com.docker.compose.project=$proof_project")"
-          compose=(docker compose -p "$proof_project" -f lab/docker-compose.yml -f lab/.lab/catalogs/dependency-proof/setups/dependency-proof.yml)
+          printf '%s\n' 'include:' '  - .lab/catalogs/dependency-proof/setups/dependency-proof.yml' > lab/.lab/dependency-proof-on.yml
+          compose=(docker compose -p "$proof_project" -f lab/docker-compose.yml -f lab/.lab/dependency-proof-on.yml)
           trap '"${compose[@]}" down --volumes --remove-orphans' EXIT
           "${compose[@]}" config --quiet
           "${compose[@]}" up --detach --wait openfga
