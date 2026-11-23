@@ -31,7 +31,7 @@ Revoke, renew, and expiration are separate operations:
 - The platform admin account, the built-in service owner `api1`, and the built-in Developer Portal user `user`.
 - A license that includes the Gamma MCP studio modules.
 
-The first start builds the Shared Services API image. MCPJam Inspector is included from the public catalog and may build the first time. Plan about 6 minutes.
+The Shared Services API image and Call Stage are published with this catalog and pulled at start. A pull that is refused builds that image here. MCPJam Inspector comes from the Gravitee public catalog. Plan about 6 minutes.
 
 | Setting | What it controls |
 |---|---|
@@ -41,7 +41,7 @@ The first start builds the Shared Services API image. MCPJam Inspector is includ
 | `RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_AGENT_KEY` | API key of Audit agent. MCPJam sends it as `X-Gravitee-Api-Key`. |
 | `RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOOL_KEY` | API key Gravitee uses when a tool calls the Shared Services API. It is not pasted. |
 | `RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_ENV_ID` | API Management environment to publish into. The default publishes into DEFAULT. |
-| `RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_PULL_POLICY` | `build` builds the API image here at each start. `always` pulls it, and builds it here when the pull fails. |
+| `RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_PULL_POLICY` | `always` pulls the published API image. `build` builds it here at each start. A refused pull builds it here. |
 | `RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_AM_PASSWORD` | Password of admin in Access Management. Match the platform AM password. |
 | `RICARDO_PUBLIC_DEMOS_API_SELF_SERVICE_LIFECYCLE_TOKEN_SECRET` | Secret of the Shared Services caller application. |
 

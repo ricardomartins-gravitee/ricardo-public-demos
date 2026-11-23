@@ -9,7 +9,7 @@ services:
   call-stage-ui:
     image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/call-stage-ui:latest
     build: ./app
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_CALL_STAGE_PULL_POLICY:-build} # build: build it here at each start; always: pull it, build it here if it cannot be pulled
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_CALL_STAGE_PULL_POLICY:-always} # always: pull the published image, and build it here if the pull is refused; build: build it here at each start
     container_name: gio-call-stage-ui
     restart: unless-stopped
     ports:

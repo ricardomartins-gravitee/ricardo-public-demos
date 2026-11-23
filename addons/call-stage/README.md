@@ -33,7 +33,7 @@ When the management API settings are set, the page also reads Gravitee's own log
 
 | Setting | What it controls |
 |---|---|
-| `RICARDO_PUBLIC_DEMOS_CALL_STAGE_PULL_POLICY` | `build` builds the page here at each start. `always` pulls it, and builds it here when the pull fails. |
+| `RICARDO_PUBLIC_DEMOS_CALL_STAGE_PULL_POLICY` | `always` pulls the published page. `build` builds it here at each start. A refused pull builds it here. |
 | `CALL_STAGE_MANAGEMENT_URL` | Management API to read a call's log from. The log is left out when this is empty |
 | `CALL_STAGE_MANAGEMENT_USERNAME` | User that can read API logs |
 | `CALL_STAGE_MANAGEMENT_PASSWORD` | Password of that user |
