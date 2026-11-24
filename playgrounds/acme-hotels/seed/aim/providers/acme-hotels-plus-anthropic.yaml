@@ -1,0 +1,13 @@
+# A model in the cloud, for the catalog only: nothing routes to it. Seeded with a real key only
+needs: ANTHROPIC_API_KEY
+name: ACME Hotels Anthropic
+slug: acme-hotels-plus-anthropic
+visibility: EVERYONE
+credential: ACME Hotels Anthropic key
+connection:
+  type: anthropic
+  targetUri: https://api.anthropic.com
+models:
+  - name: claude-sonnet-5
+    taskType: CHAT
+    registryRef: {templateId: anthropic, modelId: claude-sonnet-5}

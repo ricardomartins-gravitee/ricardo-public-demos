@@ -1,0 +1,15 @@
+# What a booking check can hold, for the policy editor. Decisions do not depend on it
+name: "🏨 ACME Hotels"
+schema: |
+  entity Hotel {};
+  entity User {
+    username?: String,
+    hotels?: Set<String>,
+    bookings?: Set<String>
+  };
+  entity Booking in [Hotel] {};
+  action "can_view" appliesTo {
+    principal: [User],
+    resource: [Booking],
+    context: { booking_id?: String }
+  };

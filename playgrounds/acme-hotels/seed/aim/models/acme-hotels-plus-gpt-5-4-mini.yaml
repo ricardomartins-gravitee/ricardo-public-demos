@@ -1,0 +1,12 @@
+needs: OPENAI_API_KEY
+entityId: acme-hotels-plus-gpt-5-4-mini
+source: ACME Hotels
+definition:
+  name: ACME Hotels GPT-5.4 mini
+  queryName: gpt-5.4-mini
+  provider: acme-hotels-plus-openai
+  family: gpt-mini
+  contextWindow: 400000
+  capabilities: [text, vision, reasoning, function-calling]
+  pricing: {inputPer1M: 0.75, outputPer1M: 4.5, currency: USD}
+  description: OpenAI model. Nothing in the lessons routes to it

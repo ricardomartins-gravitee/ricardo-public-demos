@@ -1,0 +1,35 @@
+# John, the hotels and the bookings the policy reasons over. John's id is the part of his Access Management
+# username before the @, which is the id the gateway sends. The bookings he owns are the ones he may see
+source: local
+entities:
+  - type: Hotel
+    id: grand-london
+    attributes: {_displayName: Grand London}
+  - type: Hotel
+    id: chateau-paris
+    attributes: {_displayName: Chateau Paris}
+  - type: Hotel
+    id: imperial-tokyo
+    attributes: {_displayName: Imperial Tokyo}
+  - type: User
+    id: john.doe
+    attributes:
+      _displayName: John Doe
+      username: john.doe@gravitee.io
+      hotels: [grand-london, chateau-paris]
+      bookings: [BK-0001, BK-0002]
+  - type: Booking
+    id: BK-0001
+    parents: [[Hotel, grand-london]]
+    attributes: {_displayName: BK-0001}
+  - type: Booking
+    id: BK-0002
+    parents: [[Hotel, chateau-paris]]
+    attributes: {_displayName: BK-0002}
+  - type: Booking
+    id: BK-0005
+    parents: [[Hotel, imperial-tokyo]]
+    attributes: {_displayName: BK-0005}
+  - type: Action
+    id: can_view
+    attributes: {_displayName: View a booking}

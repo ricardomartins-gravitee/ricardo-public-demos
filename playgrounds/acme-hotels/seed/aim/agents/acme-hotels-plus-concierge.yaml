@@ -1,0 +1,6 @@
+# The concierge, registered from its card. The seed reads the card: the platform reads one only from a public address
+entityId: acme-hotels-plus-concierge
+source: ACME Hotels
+url: ${CONCIERGE_CARD_URL}
+metadata:
+  riskClassification: limited

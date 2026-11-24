@@ -1,0 +1,5 @@
+# The one tool the concierge uses to talk to the booking desk. The server names itself acme-hotels-booking-desk
+name: ACME Hotels Booking Desk
+entityId: mcp-server.acme-hotels-booking-desk
+endpoint: ${BOOKING_DESK_MCP_URL}
+description: ask_booking_desk and ask_loyalty_desk, the prompts search-hotels and loyalty-offer, and the stay policy and guest privacy resources

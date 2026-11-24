@@ -1,0 +1,17 @@
+# The hotels' tools and the booking-desk tool, under one endpoint. Open, so a client can list them without a token
+name: ACME Hotels Desk
+description: Hotel search, hotel details, the booking desk and the loyalty desk, as one MCP server
+contextPath: /acme-hotels-plus/desk
+supportedProtocolVersions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+fga: false
+plan:
+  name: Open
+  security:
+    type: KEYLESS
+    configuration: {}
+tools:
+  - {server: ACME Hotels API MCP Server, tool: searchHotels}
+  - {server: ACME Hotels API MCP Server, tool: getHotelById}
+  - {server: ACME Hotels API MCP Server, tool: getHotelReviews}
+  - {server: acme-hotels-booking-desk, tool: ask_booking_desk}
+  - {server: acme-hotels-booking-desk, tool: ask_loyalty_desk}

@@ -1,0 +1,6 @@
+# The booking desk, registered from its card
+entityId: acme-hotels-plus-booking-desk
+source: ACME Hotels
+url: ${BOOKING_CARD_URL}
+metadata:
+  riskClassification: limited

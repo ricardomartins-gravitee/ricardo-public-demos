@@ -1,0 +1,12 @@
+entityId: acme-hotels-plus-guest-privacy
+source: ACME Hotels
+name: ACME Hotels guest privacy
+description: Simulated rule for what the concierge may say about a guest
+content: |
+  # ACME Hotels guest privacy
+
+  This note is simulated for the demo.
+
+  The concierge talks to the guest who is signed in. A hotel search and the list of that guest's bookings
+  go to the booking desk, with the guest's token. The gateway checks each booking. The desk does not read
+  another guest's bookings.

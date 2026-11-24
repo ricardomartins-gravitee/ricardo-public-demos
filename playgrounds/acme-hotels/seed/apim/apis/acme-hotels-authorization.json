@@ -1,0 +1,102 @@
+{
+  "api": {
+    "definitionVersion": "V4",
+    "type": "PROXY",
+    "listeners": [
+      {
+        "type": "HTTP",
+        "paths": [
+          {
+            "path": "/hotels-authz/"
+          }
+        ],
+        "entrypoints": [
+          {
+            "type": "http-proxy",
+            "qos": "NONE",
+            "configuration": {}
+          }
+        ]
+      }
+    ],
+    "endpointGroups": [
+      {
+        "name": "Unused",
+        "type": "http-proxy",
+        "loadBalancer": {
+          "type": "ROUND_ROBIN"
+        },
+        "endpoints": [
+          {
+            "name": "Not forwarded",
+            "type": "http-proxy",
+            "weight": 1,
+            "inheritConfiguration": false,
+            "configuration": {
+              "target": "${HOTELS_BACKEND_URL}"
+            },
+            "secondary": false
+          }
+        ]
+      }
+    ],
+    "flows": [
+      {
+        "name": "Evaluate",
+        "enabled": true,
+        "selectors": [
+          {
+            "type": "HTTP",
+            "path": "/access/v1/evaluation",
+            "pathOperator": "EQUALS",
+            "methods": [
+              "POST"
+            ]
+          }
+        ],
+        "request": [
+          {
+            "name": "Authorization",
+            "description": "The gateway's policy engine answers, and the call is not forwarded",
+            "enabled": true,
+            "policy": "authz-pdp-authzen",
+            "configuration": {
+              "endpointType": "EVALUATION",
+              "logDecisions": true,
+              "noSnapshotPolicy": "RETRY_THEN_DENY",
+              "noSnapshotMaxWaitMs": 3000,
+              "evalTimeoutMs": 1000
+            }
+          }
+        ],
+        "response": [],
+        "subscribe": [],
+        "publish": [],
+        "tags": []
+      }
+    ],
+    "name": "ACME Hotels Authorization",
+    "description": "Whether a guest may see a booking, decided by Authorization Management",
+    "apiVersion": "1.0.0",
+    "state": "STARTED",
+    "visibility": "PRIVATE",
+    "lifecycleState": "PUBLISHED",
+    "tags": []
+  },
+  "plans": [
+    {
+      "definitionVersion": "V4",
+      "name": "Open",
+      "description": "The hotels API asks this from inside the gateway",
+      "security": {
+        "type": "KEY_LESS",
+        "configuration": {}
+      },
+      "mode": "STANDARD",
+      "status": "PUBLISHED",
+      "validation": "AUTO",
+      "flows": [],
+      "order": 1
+    }
+  ]
+}

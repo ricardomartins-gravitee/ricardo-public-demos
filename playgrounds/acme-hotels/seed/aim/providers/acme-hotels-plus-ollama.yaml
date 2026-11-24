@@ -1,0 +1,22 @@
+# Ollama on the host. The model is declared, not scanned: the platform does not call a private address to list it,
+# and a price is what makes the AI workspace budget move
+name: ACME Hotels Ollama
+slug: acme-hotels-plus-ollama
+visibility: EVERYONE
+credential: ACME Hotels Ollama key
+connection:
+  type: openai-compatible
+  targetUri: ${OLLAMA_URL}/v1
+models:
+  - name: qwen3:0.6b
+    taskType: CHAT
+    summary: Smaller local model, listed beside the one the chat calls
+    pricingOverride: {inputPer1M: 20, outputPer1M: 20, currency: USD}
+  - name: qwen3:1.7b
+    taskType: CHAT
+    summary: The model the proxy tries when a call to gemma4:12b fails
+    pricingOverride: {inputPer1M: 50, outputPer1M: 50, currency: USD}
+  - name: gemma4:12b
+    taskType: CHAT
+    summary: The model the concierge, the booking desk and the loyalty desk call
+    pricingOverride: {inputPer1M: 200, outputPer1M: 200, currency: USD}

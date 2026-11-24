@@ -1,0 +1,6 @@
+# The hotels' tools, discovered from the gateway. The entity id is made of the name the MCP entrypoint gives
+# itself, which is the API's name
+name: ACME Hotels API MCP Server
+entityId: mcp-server.acme-hotels-api-mcp-server
+endpoint: ${HOTELS_MCP_URL}
+description: Search, reviews and bookings of ACME Hotels, as MCP tools on the gateway

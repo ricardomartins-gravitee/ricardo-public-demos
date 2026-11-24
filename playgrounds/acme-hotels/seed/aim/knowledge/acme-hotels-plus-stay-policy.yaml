@@ -1,0 +1,21 @@
+# Invented policy, for the catalog. The agents do not read it: it shows a knowledge document in Agent Management
+entityId: acme-hotels-plus-stay-policy
+source: ACME Hotels
+name: ACME Hotels stay policy
+description: Simulated cancellation and change rules the booking desk would follow
+content: |
+  # ACME Hotels stay policy
+
+  This policy is simulated for the demo. It is not a real hotel rule.
+
+  ## A change
+
+  A stay can be moved once, at no charge, when the new dates are free. A second change is a new booking.
+
+  ## A cancellation
+
+  - More than two days before arrival: the stay is refunded in full.
+  - The day before arrival: one night is kept.
+  - The day of arrival: the stay is kept.
+
+  The booking desk searches hotels and lists the signed-in guest's bookings. It acts with that guest's token, and the gateway checks each booking.

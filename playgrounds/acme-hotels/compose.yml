@@ -1,0 +1,342 @@
+# Demo secrets shared by every container that needs them. Change one in the shell or in this playground's .env.
+x-acme-hotels-plus-secrets:
+  demo-password: &demo-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_DEMO_PASSWORD:-HelloWorld@123} # Password of John Doe
+  agent-client-secret: &agent-client-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET:-hotel-ai-agent} # Secret of the hotel agent's application in Access Management
+  mcp-resource-secret: &mcp-resource-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_RESOURCE_SECRET:-hotel-mcp} # Secret of the booking MCP server's resource in Access Management; letters, digits and dashes only
+  apim-password: &apim-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_APIM_PASSWORD:-admin} # Password of user admin in API Management
+  am-password: &am-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AM_PASSWORD:-adminadmin} # Password of user admin in Access Management
+  aws-access-key: &aws-access-key ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AWS_ACCESS_KEY_ID:-test} # Access key of the local AWS account
+  aws-secret-key: &aws-secret-key ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AWS_SECRET_ACCESS_KEY:-test} # Secret key of the local AWS account
+
+x-gravitee:
+  kind: playground
+  name: "🏨 ACME Hotels"
+  category: AI
+  description: Exposure, security and governance of the ACME Hotels concierge, its booking desk and a loyalty desk that runs as an AWS agent
+  tags: [AI Agents, LLM Proxy, MCP, A2A, Guard Rails, Authorization, Agent Management]
+  source: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop
+  duration: 45 min
+  first_start: 12 min
+  requires:
+    images:
+      APIM_VERSION: "4.13"
+      AM_VERSION: "4.13"
+    plugins:
+      apim: [gravitee-policy-interrupt]
+    license:
+      - apim-reporter-tcp # the AI Agent Inspector, which the website shows
+      - gamma-aim-module # Agent Management, which the seed fills
+      - gamma-aim-entrypoint-mcp-studio # The studio that gathers the hotels' tools and the booking desk
+      - gamma-aim-endpoint-tools-mcp # The studio calls an MCP server of the catalog
+      - gamma-authz-module # Authorization Management, which decides the bookings a guest may see
+      - gamma-authz-service-pdp # The policy engine in the gateway
+      - gamma-authz-policy-authzen-pdp # The endpoint the hotels API asks for each booking
+    host:
+      - name: Ollama with gemma4:12b
+        check: http://localhost:11434/api/tags
+        expect: gemma4:12b
+        help: Install Ollama (ollama.com/download), then run `ollama pull gemma4:12b` and `ollama pull qwen3:1.7b`; the containers must be able to reach it (Troubleshooting, Ollama)
+      - name: Hugging Face (the gateway's AI models)
+        check: https://huggingface.co
+        help: The gateway downloads its AI models (129 MB) from huggingface.co when it first deploys the LLM proxy. Without access the seed ends with a timeout
+  tested:
+    - APIM_VERSION: "4.13.6"
+      APIM_REGISTRY: graviteeio
+      APIM_GATEWAY_VERSION: "4.13.6-debian"
+      APIM_GATEWAY_REGISTRY: graviteeio
+      AM_VERSION: "4.13.7"
+      AM_REGISTRY: graviteeio
+  consoles: [apim-management-ui, gamma-ui]
+  accounts:
+    - for: "ACME Hotels website: John Doe (guest)"
+      username: john.doe@gravitee.io
+      password: *demo-password
+    - for: Gamma and API Management consoles
+      username: admin
+      password: *apim-password
+    - for: Access Management console
+      username: admin
+      password: *am-password
+    - for: "Local AWS account: access key"
+      key: *aws-access-key
+    - for: "Local AWS account: secret key"
+      key: *aws-secret-key
+
+x-acme-hotels-plus-healthcheck: &healthcheck
+  interval: 5s
+  timeout: 3s
+  retries: 20
+
+include:
+  - ../../../gravitee/addons/ai-agent-inspector/compose.yml # The website shows its live diagram of the agent's calls
+  - ../../../gravitee/addons/mcpjam-inspector/compose.yml # Lists the agent's tools
+  - ../../../gravitee/addons/redisinsight/compose.yml # Shows the semantic cache
+
+services:
+
+  acme-hotels-plus-backend:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-backend:latest
+    build: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312:acme-hotel-api # Pinned to an upstream commit, so the image does not change unannounced
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build} # build: build it here at each start; always: pull it, build it here if it cannot be pulled
+    container_name: gio-acme-hotels-plus-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8131:8000" # The hotels' REST API, unprotected: calling it skips the gateway
+    labels:
+      io.gravitee.name: ACME Hotels REST API
+      io.gravitee.description: The hotels' REST API, which the gateway protects and exposes as MCP tools
+      io.gravitee.console.acme-hotels-plus-backend.name: ACME Hotels REST API docs
+      io.gravitee.console.acme-hotels-plus-backend.url: http://localhost:8131/docs
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/health"]
+    networks:
+      - internal
+
+  acme-hotels-plus-agent:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-agent:latest
+    build:
+      context: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312
+      dockerfile: hotel-agent/Dockerfile
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    container_name: gio-acme-hotels-plus-agent
+    restart: unless-stopped
+    depends_on:
+      acme-hotels-plus-backend:
+        condition: service_healthy
+      apim-gateway:
+        condition: service_healthy
+      am-gateway:
+        condition: service_healthy
+      acme-hotels-plus-desk:
+        condition: service_healthy # One of its tools is the booking desk
+      acme-hotels-plus-booking:
+        condition: service_healthy # A search waits for the desk to be answering
+      acme-hotels-plus-seed:
+        condition: service_completed_successfully # It signs in and lists its tools as it starts, so the seed comes first
+    environment:
+      AGENT_SERVER_PORT: "8001" # The port it listens on
+      AGENT_NAME: ACME Hotels Concierge # The name on its agent card
+      AGENT_DESCRIPTION: The guest's assistant. It answers on the website, asks the booking desk to search hotels, and asks the loyalty desk in AWS for an offer. # The description on its agent card
+      SYSTEM_PROMPT: "You are the ACME Hotels concierge. You do not search hotels and you do not list bookings. When the guest asks for a loyalty offer, points, or the loyalty desk, call ask_loyalty_desk and pass their words as question. For every other message, including a hotel or their bookings, call ask_booking_desk and pass their words unchanged as question. Never invent a hotel, a booking, or an offer." # Which tool it picks
+      LLM_BASE_URL: http://apim-gateway:8082/llm-proxy # The LLM proxy
+      LLM_MODEL: ollama:gemma4:12b # Provider and model on the LLM proxy
+      LLM_TEMPERATURE: "0.3"
+      MCP_HTTP_URLS: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_URL:-http://acme-hotels-plus-desk:8088/mcp} # The desks. A value you set replaces this
+      AM_TOKEN_URL: http://am-gateway:8092/acme-hotels/oauth/token # Token endpoint of the Access Management domain
+      AM_CLIENT_ID: hotel-ai-agent # Its application in Access Management
+      AM_CLIENT_SECRET: *agent-client-secret # RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET
+    labels:
+      io.gravitee.name: Hotel concierge
+      io.gravitee.description: The assistant that answers guests and asks the booking desk to search
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/.well-known/agent-card.json')"]
+    networks:
+      - internal
+
+  acme-hotels-plus-booking:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-agent:latest
+    build:
+      context: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312
+      dockerfile: hotel-agent/Dockerfile
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    container_name: gio-acme-hotels-plus-booking
+    restart: unless-stopped
+    depends_on:
+      acme-hotels-plus-backend:
+        condition: service_healthy
+      apim-gateway:
+        condition: service_healthy
+      am-gateway:
+        condition: service_healthy
+      acme-hotels-plus-seed:
+        condition: service_completed_successfully # The hotels' tools and its A2A proxy exist once the seed has run
+    environment:
+      AGENT_SERVER_PORT: "8001" # The port it listens on
+      AGENT_NAME: ACME Hotels Booking Desk # The name on its agent card
+      AGENT_DESCRIPTION: Searches hotels and reads a stay. The concierge asks it, through the gateway. # The description on its agent card
+      SYSTEM_PROMPT: "You are the ACME Hotels booking desk. Search hotels with searchHotels. Read one hotel with getHotelById. Read reviews with getHotelReviews. When the guest asks to see their bookings, call listBookings. Never invent a hotel, a price, a rating, or a booking. Reply with what the tool returned." # It searches and lists bookings. The cache, the limit and the guard rails match this prompt
+      LLM_BASE_URL: http://apim-gateway:8082/llm-proxy # The LLM proxy
+      LLM_MODEL: ollama:gemma4:12b # Provider and model on the LLM proxy
+      LLM_TEMPERATURE: "0.3"
+      MCP_HTTP_URLS: http://apim-gateway:8082/hotels/mcp # The hotels' tools, behind the gateway
+      AM_TOKEN_URL: http://am-gateway:8092/acme-hotels/oauth/token # Token endpoint of the Access Management domain
+      AM_CLIENT_ID: hotel-ai-agent # The same application as the concierge
+      AM_CLIENT_SECRET: *agent-client-secret # RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET
+    labels:
+      io.gravitee.name: Booking desk
+      io.gravitee.description: The agent that searches hotels when the concierge asks
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/.well-known/agent-card.json')"]
+    networks:
+      - internal
+
+  acme-hotels-plus-desk:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-desk:latest
+    build: ./apps/booking-desk
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    container_name: gio-acme-hotels-plus-desk
+    restart: unless-stopped
+    environment:
+      BOOKING_A2A_URL: http://apim-gateway:8082/booking-desk/ # The booking desk's A2A proxy, so the call shows on the gateway
+      LOYALTY_A2A_URL: http://apim-gateway:8082/loyalty-desk/ # The loyalty desk's A2A proxy, so the call shows on the gateway
+    labels:
+      io.gravitee.name: Booking desk bridge
+      io.gravitee.description: The MCP tool the concierge calls, and the agent cards the catalog registers
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8088/health'); urllib.request.urlopen('http://127.0.0.1:8089/health')"]
+    networks:
+      - internal
+
+  acme-hotels-plus-web:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-web:latest
+    build: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312:acme-hotel-website
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    container_name: gio-acme-hotels-plus-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8130:80" # The website
+    environment:
+      AGENT_CARD_URL: http://localhost:8082/hotel-agent/.well-known/agent-card.json # The agent's card on the gateway's A2A proxy, as your browser reaches it
+      OIDC_URL: http://localhost:8092/acme-hotels/oidc/.well-known/openid-configuration # OpenID configuration of the Access Management domain, as your browser reaches it
+      CLIENT_ID: acme-hotels # Its application in Access Management
+      REDIRECT_URI: http://localhost:8130/ # Where Access Management sends the guest back
+    entrypoint: ["/bin/sh", "/acme-hotels-plus-web-entrypoint.sh"]
+    volumes:
+      - ./apps/website/entrypoint.sh:/acme-hotels-plus-web-entrypoint.sh:ro # Replaces the chat samples with the guide's sentences
+      - ./apps/website/suggestions.html:/acme-hotels-plus-suggestions.html:ro # The samples the chat offers
+    labels:
+      io.gravitee.name: ACME Hotels website
+      io.gravitee.description: The hotels' website, where guests chat with the agent
+      io.gravitee.console.acme-hotels-plus-web.name: ACME Hotels
+      io.gravitee.console.acme-hotels-plus-web.url: http://localhost:8130
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+    networks:
+      - internal
+
+  acme-hotels-plus-ministack:
+    image: ministackorg/ministack:${MINISTACK_VERSION:-full} # The local AWS account
+    container_name: gio-acme-hotels-plus-ministack
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8166:4566" # The local AWS account, as you reach it
+    labels:
+      io.gravitee.name: Local AWS account
+      io.gravitee.description: The AWS account where the loyalty desk runs, simulated by MiniStack
+      io.gravitee.console.acme-hotels-plus-ministack.name: Local AWS account
+      io.gravitee.console.acme-hotels-plus-ministack.url: http://localhost:8166
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:4566/_ministack/health')"]
+    networks:
+      - internal
+
+  acme-hotels-plus-loyalty:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-loyalty:latest
+    build: ./apps/loyalty-desk
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    command: ["python", "register.py"] # Serves the desk for the gateway and registers the AgentCore runtime
+    container_name: gio-acme-hotels-plus-loyalty
+    restart: unless-stopped
+    depends_on:
+      acme-hotels-plus-ministack:
+        condition: service_healthy # The runtime is created in the local AWS account
+    environment:
+      AWS_ENDPOINT_URL: http://acme-hotels-plus-ministack:4566 # MiniStack, as this process reaches it
+      AWS_DEFAULT_REGION: us-east-1 # The region the loyalty runtime is created in
+      AWS_ACCESS_KEY_ID: *aws-access-key
+      AWS_SECRET_ACCESS_KEY: *aws-secret-key
+      LOYALTY_IMAGE: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-loyalty:latest # The image named on the AgentCore runtime
+      LLM_BASE_URL: http://apim-gateway:8082/llm-proxy # The LLM proxy, as the runtime reaches it
+      LLM_MODEL: ollama:gemma4:12b # Provider and model on the LLM proxy
+      MCP_URL: http://apim-gateway:8082/hotels-mcp/mcp # The hotels' tools, as the runtime reaches them
+      LOYALTY_LLM_TIMEOUT: "60" # Seconds the loyalty desk waits for the LLM proxy
+    labels:
+      io.gravitee.name: Loyalty desk
+      io.gravitee.description: The loyalty desk Gravitee calls, registered as an AgentCore runtime in the local AWS account
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/health')"]
+    networks:
+      - internal
+
+  acme-hotels-plus-seed:
+    image: ghcr.io/gravitee-io-labs/gravitee-lab/seeder:latest
+    build: ../../../../../seeder
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    container_name: gio-acme-hotels-plus-seed
+    restart: "no"
+    depends_on:
+      apim-management-api:
+        condition: service_healthy
+      am-management-api:
+        condition: service_healthy
+      apim-gateway:
+        condition: service_healthy
+      acme-hotels-plus-desk:
+        condition: service_healthy # The seed discovers its MCP tool and reads the agent cards from it
+      acme-hotels-plus-loyalty:
+        condition: service_healthy # The seed reads the loyalty desk's card, and its runtime exists
+    volumes:
+      - ./seed:/seed:ro
+      - ./.state:/state # What the seed created, to remove it later
+    environment:
+      APIM_MANAGEMENT_URL: http://apim-management-api:8083
+      APIM_USERNAME: admin
+      APIM_PASSWORD: *apim-password
+      AM_MANAGEMENT_URL: http://am-management-api:8093
+      AM_USERNAME: admin
+      AM_PASSWORD: *am-password
+      APIM_GATEWAY_URL: http://localhost:8082 # The gateway, as you reach it and as it reaches itself
+      GATEWAY_INTERNAL_URL: http://apim-gateway:8082 # The gateway, as the seed reaches it
+      GATEWAY_READY_TIMEOUT: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_GATEWAY_READY_TIMEOUT:-300} # Seconds the seed waits for the gateway to serve each API (the first start downloads the AI models)
+      SEED_WAIT_GATEWAY: "1" # Discover the MCP servers only after the gateway serves every API
+      AM_GATEWAY_URL: http://am-gateway:8092 # Access Management, as the gateway reaches it
+      HOTELS_BACKEND_URL: http://acme-hotels-plus-backend:8000 # The hotels' REST API
+      HOTELS_AGENT_URL: http://acme-hotels-plus-agent:8001 # The concierge
+      BOOKING_AGENT_URL: http://acme-hotels-plus-booking:8001 # The booking desk, behind its A2A proxy
+      HOTELS_MCP_URL: http://apim-gateway:8082/hotels-mcp/mcp # The hotels' MCP server, as the seed discovers it
+      BOOKING_DESK_MCP_URL: http://acme-hotels-plus-desk:8088/mcp # The concierge's tool that calls the booking desk
+      CONCIERGE_CARD_URL: http://acme-hotels-plus-desk:8089/concierge # Where the seed reads the concierge's card
+      BOOKING_CARD_URL: http://acme-hotels-plus-desk:8089/booking # Where the seed reads the booking desk's card
+      LOYALTY_AGENT_URL: http://acme-hotels-plus-loyalty:8090 # The loyalty desk, behind its A2A proxy
+      LOYALTY_CARD_URL: http://acme-hotels-plus-loyalty:8090 # Where the seed reads the loyalty desk's card
+      HOTELS_WEB_URL: http://localhost:8130 # The website, as your browser reaches it
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434} # Ollama, as the gateway reaches it
+      REDIS_URL: redis://redis:6379 # The core's Redis
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redispassword} # The core's Redis password
+      GEMINI_API_KEY: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_GEMINI_API_KEY:-} # Optional Google AI Studio key. Empty skips the Gemini provider
+      OPENAI_API_KEY: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_OPENAI_API_KEY:-} # Optional OpenAI key. Empty skips the OpenAI provider
+      ANTHROPIC_API_KEY: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_ANTHROPIC_API_KEY:-} # Optional Anthropic key. Empty skips the Anthropic provider
+      DEMO_PASSWORD: *demo-password
+      AGENT_CLIENT_SECRET: *agent-client-secret
+      MCP_RESOURCE_SECRET: *mcp-resource-secret
+    labels:
+      io.gravitee.name: Playground seed
+      io.gravitee.description: Sets up the hotels' APIs, the three agents and the Agent Management catalog
+      io.gravitee.role: seed
+    networks:
+      - internal
+
+  apim-gateway:
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # Ollama on this machine, also on Linux
+    volumes:
+      - data-acme-hotels-plus-gateway-models:/opt/graviteeio-gateway/models # The AI models downloaded on first start (129 MB)
+    environment:
+      # The classes the booking filter's script uses to call Access Management, after the core's entries 0 and 1
+      gravitee_groovy_whitelist_list_2: class java.net.URL
+      gravitee_groovy_whitelist_list_3: class java.net.URLConnection
+      gravitee_groovy_whitelist_list_4: class sun.net.www.protocol.http.HttpURLConnection
+      gravitee_groovy_whitelist_list_5: class java.io.OutputStream
+      gravitee_groovy_whitelist_list_6: class java.io.InputStreamReader
+      gravitee_groovy_whitelist_list_7: class java.io.BufferedReader
+      gravitee_groovy_whitelist_list_8: class java.lang.StringBuilder
+
+volumes:
+  data-acme-hotels-plus-gateway-models:
