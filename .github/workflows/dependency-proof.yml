@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ricardomartins-gravitee/gravitee-lab
-          ref: b9721c27b6705cae3cb35c9a06064e5122ce24de
+          ref: 4b3b979e8b8794d74b04fc9b243cfcc928a5cd2f
           path: lab
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: ricardomartins-gravitee/gravitee-lab
-          ref: b9721c27b6705cae3cb35c9a06064e5122ce24de
+          ref: 4b3b979e8b8794d74b04fc9b243cfcc928a5cd2f
           path: lab
           persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
