@@ -24,7 +24,7 @@ flowchart TB
 The hexagons are the Gravitee *gateway*. It has a *proxy* for each kind of traffic:
 
 - the *A2A* (agent to agent) proxy carries the guest's messages to the concierge, the concierge's question to the booking desk, and the concierge's question to the loyalty desk
-- the *LLM* (large language model) proxy carries each agent's calls to the model, including the loyalty desk's. The cache, the token limit, the guard rails and the PII filter apply to the booking desk. The agents call `gemma4:12b`. A failed call is tried once more, on `qwen3:1.7b`. A slow answer stays on Gemma: loading the model is not a failure
+- the *LLM* (large language model) proxy carries each agent's calls to the model, including the loyalty desk's. The guard rails, the cache, the token limit and the PII filter apply to every agent's model call. A tool call is not cached, and a booking list is not cached. The PII filter leaves a turn that already holds a tool result unchanged. The agents call `gemma4:12b`. A failed call is tried once more, on `qwen3:1.7b`. A slow answer stays on Gemma: loading the model is not a failure
 - the hotels' *MCP* (model context protocol) server turns the hotels' REST API into tools. The booking desk receives those tools, including `listBookings`. The concierge receives one MCP server, with which it asks the other two agents (`ask_booking_desk`, `ask_loyalty_desk`). That server also publishes the prompts and the stay policy
 - the hotels' REST API sits behind the gateway too, which lets only the right calls through
 
@@ -53,7 +53,7 @@ A model answer costs time and tokens. The gateway can answer a question it has a
 
 - The concierge calls `ask_booking_desk`. It has no hotel search of its own.
 - The second answer comes back much faster.
-- In the inspector, the semantic cache shows a hit on the booking desk's model call: the gateway found a question close in meaning in its cache and did not call the model.
+- The cache runs on the concierge, the booking desk and the loyalty desk. In the inspector, the semantic cache shows a hit on the model call that stored a finished answer: the gateway found a question close in meaning and did not call the model. A tool call is not stored, and neither is a booking list.
 - The cache is a *vector store* in Redis. Open [RedisInsight](http://localhost:5540) to see its entries.
 - In the **APIM Console** tab, open the API **ACME Hotels LLMs**, then **Policies**. The semantic caching step of the flow `POST /chat/completions` is the one that answered.
 
@@ -68,7 +68,7 @@ A model bills by the token. The gateway can stop a caller before the model is re
 ### Look
 
 - The second request is rejected with a `429`.
-- In the inspector, the **Token Rate Limit** policy turns red on the booking desk's model call. The gateway stopped that call before it reached the model.
+- The limit counts the concierge, the booking desk and the loyalty desk together. In the inspector, the **Token Rate Limit** policy turns red on the model call that crosses it. The gateway stopped that call before it reached the model.
 - The limit is 2,000 tokens every 15 seconds. In the **APIM Console** tab, open the API **ACME Hotels LLMs**, then **Policies**: it is the token rate limit step of the flow `POST /chat/completions`.
 
 ## 3. Block risky prompts
@@ -81,8 +81,9 @@ A prompt can ask the model to do what it should not.
 
 ### Look
 
-- The concierge passes the sentence to the booking desk, and the gateway rejects the desk's model call.
-- A small classification model, which runs in the gateway, read the prompt and recognized the intent. The booking desk's model never saw the prompt.
+- The gateway reads the sentence on the concierge's model call and rejects it. The concierge does not ask the desk.
+- The same check runs for the booking desk and the loyalty desk. A sentence that reached either of them would be rejected there too.
+- A small classification model, which runs in the gateway, read the prompt and recognized the intent. None of the agents' models saw it.
 - In the **APIM Console** tab, open the API **ACME Hotels LLMs**, then **Policies**: it is the prompt guard rails step, the first of the flow `POST /chat/completions`.
 
 ## 4. Sign in and authorize

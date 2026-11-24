@@ -156,7 +156,7 @@ services:
       AGENT_SERVER_PORT: "8001" # The port it listens on
       AGENT_NAME: ACME Hotels Booking Desk # The name on its agent card
       AGENT_DESCRIPTION: Searches hotels and reads a stay. The concierge asks it, through the gateway. # The description on its agent card
-      SYSTEM_PROMPT: "You are the ACME Hotels booking desk. Search hotels with searchHotels. Read one hotel with getHotelById. Read reviews with getHotelReviews. When the guest asks to see their bookings, call listBookings. Never invent a hotel, a price, a rating, or a booking. Reply with what the tool returned." # It searches and lists bookings. The cache, the limit and the guard rails match this prompt
+      SYSTEM_PROMPT: "You are the ACME Hotels booking desk. Search hotels with searchHotels. Read one hotel with getHotelById. Read reviews with getHotelReviews. When the guest asks to see their bookings, call listBookings. Never invent a hotel, a price, a rating, or a booking. Reply with what the tool returned." # It searches and lists bookings
       LLM_BASE_URL: http://apim-gateway:8082/llm-proxy # The LLM proxy
       LLM_MODEL: ollama:gemma4:12b # Provider and model on the LLM proxy
       LLM_TEMPERATURE: "0.3"

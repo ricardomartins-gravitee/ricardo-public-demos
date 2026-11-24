@@ -186,7 +186,7 @@
         "request": [
           {
             "name": "AI - Prompt Guard Rails",
-            "description": "Block Malicious Requests",
+            "description": "Block a malicious guest message on every agent's model call: the concierge, the booking desk and the loyalty desk.",
             "enabled": true,
             "policy": "ai-prompt-guard-rails",
             "configuration": {
@@ -195,11 +195,11 @@
               "contentChecks": "MALICIOUS",
               "promptLocation": "{#jsonPath(#request.content, '$.messages[?(@.role==\"user\")].content').$[true]}",
               "requestPolicy": "BLOCK_REQUEST"
-            },
-            "condition": "{#request.content.contains('You are the ACME Hotels booking desk')}"
+            }
           },
           {
             "name": "Token Rate Limit",
+            "description": "Count tokens on every agent's model call: the concierge, the booking desk and the loyalty desk.",
             "enabled": true,
             "policy": "token-ratelimit",
             "configuration": {
@@ -212,12 +212,11 @@
                 "key": ""
               },
               "strategy": "ASYNC_MODE"
-            },
-            "condition": "{#request.content.contains('You are the ACME Hotels booking desk')}"
+            }
           },
           {
             "name": "PII Filtering",
-            "description": "Automated PII Redaction",
+            "description": "Redact personal data on every agent's model call. A turn that already holds a tool result is left as the tool returned it.",
             "enabled": true,
             "policy": "pii-filtering",
             "configuration": {
@@ -231,11 +230,11 @@
               ],
               "skipResponsePayloadFiltering": true
             },
-            "condition": "{#request.content.contains('You are the ACME Hotels booking desk') && #jsonPath(#request.content, '$.messages[?(@.role==\"tool\")]').size() == 0}"
+            "condition": "{#jsonPath(#request.content, '$.messages[?(@.role==\"tool\")]').size() == 0}"
           },
           {
             "name": "AI Semantic Caching",
-            "description": "Cache LLM response, expect for LLM Tool Choice and if accessing Bookings.",
+            "description": "Cache a finished answer from every agent's model call. A tool choice is not cached, and neither is a booking list.",
             "enabled": true,
             "policy": "ai-semantic-caching",
             "configuration": {
@@ -251,7 +250,7 @@
                 }
               ]
             },
-            "condition": "{#request.content.contains('You are the ACME Hotels booking desk') && #jsonPath(#request.content, '$.tool_choice') == null && #jsonPath(#request.content, '$.messages[?(@.role==\"assistant\")].tool_calls[0].function.name')[0] != \"listBookings\"}"
+            "condition": "{#jsonPath(#request.content, '$.tool_choice') == null && #jsonPath(#request.content, '$.messages[?(@.role==\"assistant\")].tool_calls[0].function.name')[0] != \"listBookings\"}"
           }
         ],
         "response": [],

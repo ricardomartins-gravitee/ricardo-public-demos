@@ -10,6 +10,7 @@ import json
 import os
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 PORT = int(os.environ.get("LOYALTY_PORT", "8080"))
@@ -188,6 +189,36 @@ def mcp_call(url, name, arguments, opener=urlopen):
     return "\n".join(texts)
 
 
+class Blocked(RuntimeError):
+    """The gateway's guard rails rejected the guest's words."""
+
+
+def screen(question, opener=urlopen):
+    """The guest's words go to the LLM proxy before any search, so the guard rails can reject them."""
+    if not LLM_BASE_URL:
+        raise RuntimeError("LLM_BASE_URL is not set")
+    payload = {
+        "model": LLM_MODEL,
+        "temperature": 0,
+        "max_tokens": 1,
+        "messages": [{"role": "user", "content": question}],
+    }
+    request = Request(
+        LLM_BASE_URL.rstrip("/") + "/chat/completions",
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    try:
+        with opener(request, timeout=LLM_TIMEOUT) as response:
+            read_body(response)
+    except HTTPError as error:
+        detail = error.read().decode(errors="replace")
+        if error.code in (400, 403) or "MALICIOUS" in detail:
+            raise Blocked("Your request was blocked because it was deemed invalid or unsafe.") from None
+        raise RuntimeError(f"The model refused the question ({error.code})") from None
+
+
 def llm_phrase(facts, opener=urlopen):
     """One sentence from the LLM proxy. The facts are the whole brief."""
     if not LLM_BASE_URL:
@@ -216,10 +247,11 @@ def llm_phrase(facts, opener=urlopen):
     return text
 
 
-def offer(question, mcp=mcp_call, phrase=llm_phrase):
-    """The loyalty offer for a question: the hotels' tools, then the model."""
+def offer(question, mcp=mcp_call, phrase=llm_phrase, screen=screen):
+    """The loyalty offer for a question: the guard rails, the hotels' tools, then the model."""
     if not question:
         raise RuntimeError("Ask with a question.")
+    screen(question)
     city = city_of(question)
     arguments = {"city": city} if city else {"q": question[:200]}
     raw = mcp(MCP_URL, "searchHotels", arguments)
@@ -257,6 +289,8 @@ def respond(method, path, raw, offer_fn=offer):
             body = {}
         try:
             text = offer_fn(question_of(body))
+        except Blocked as error:
+            return 200, json.dumps(a2a_result(body, str(error))).encode(), "application/json"
         except Exception as error:
             return 200, json.dumps(a2a_error(body, str(error))).encode(), "application/json"
         return 200, json.dumps(a2a_result(body, text)).encode(), "application/json"
