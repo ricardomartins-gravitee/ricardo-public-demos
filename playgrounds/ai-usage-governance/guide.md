@@ -11,9 +11,19 @@ flowchart LR
   gateway --> gemma[Local gemma4:12b]
 ```
 
-The daemon is installed on this Mac from Gamma, **Edge Management**, **Daemon deployment**, and it is already running. Shadow AI watches `api.anthropic.com`. Interception does not, yet: **DNS domains** is `unused.invalid`, a name nothing calls. Leave `ANTHROPIC_BASE_URL` unset.
+The daemon is installed once on this Mac from Gamma, **Edge Management**, **Daemon deployment**. Leave `ANTHROPIC_BASE_URL` unset. The daemon is macOS only. This demo does not show Windows, Linux, Microsoft Entra, browser traffic, or Microsoft Copilot.
 
-This demo does not show Windows, Linux, Microsoft Entra, browser traffic, or Microsoft Copilot. The daemon is macOS only.
+## Power the daemon
+
+Start this playground first, so the reactor on port 18093 is up. Then, from the catalog folder:
+
+```bash
+playgrounds/ai-usage-governance/scripts/edge up
+```
+
+The daemon runs, Shadow AI watches `api.anthropic.com`, and interception stays off: **DNS domains** is `unused.invalid`, a name nothing calls. `scripts/edge status` reports the daemon, the interception, and the reactor.
+
+Starting or stopping the playground does not do this. The daemon starts at boot on its own.
 
 ## 1. Use Claude Code without a care
 
@@ -38,6 +48,7 @@ That prompt comes through Gravitee. On [Governed models](http://localhost:8086/e
 
 ## Put the demo back
 
-On this playground's page, choose **Re-seed**. That puts **DNS domains** back to `unused.invalid`, so the next pass starts with Claude Code talking to Anthropic again. Shadow AI still watches `api.anthropic.com`. It also republishes the LLM proxy, with local Gemma as the default route, Qwen as its failover, and the Anthropic endpoint configured.
+1. From the catalog folder, run `playgrounds/ai-usage-governance/scripts/edge down`. The daemon stops, the DNS override for `api.anthropic.com` is removed, and the next boot does not start it again.
+2. On this playground's page, choose **Re-seed**. That puts **DNS domains** back to `unused.invalid` for the next pass. It also republishes the LLM proxy, with local Gemma as the default route, Qwen as its failover, and the Anthropic endpoint configured.
 
-Do not use **Reset** on the Containers page. That removes the whole lab, including other demos.
+Stopping the playground leaves the daemon running. Do not use **Reset** on the Containers page. That removes the whole lab, including other demos.
