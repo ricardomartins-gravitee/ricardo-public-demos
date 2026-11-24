@@ -104,15 +104,15 @@ A stay can be moved once, at no charge, when the new dates are free. A second ch
 - The day before arrival: one night is kept.
 - The day of arrival: the stay is kept.
 
-The booking desk searches hotels and lists the signed-in guest's bookings. It acts with that guest's token, and the gateway checks each booking.
+The booking desk searches hotels and lists the signed-in guest's bookings. It exchanges that guest's token, and the gateway checks each booking.
 """
 GUEST_PRIVACY = """# ACME Hotels guest privacy
 
 This note is simulated for the demo.
 
 The concierge talks to the guest who is signed in. A hotel search and the list of that guest's bookings
-go to the booking desk, with the guest's token. The gateway checks each booking. The desk does not read
-another guest's bookings.
+go to the booking desk, with the guest's token. The desk exchanges that token. The gateway checks each
+booking. The loyalty desk is not given the token. The desk does not read another guest's bookings.
 """
 RESOURCES = [
     {
@@ -188,6 +188,13 @@ def ask_agent(url, question, authorization, opener=urlopen, timeout=A2A_TIMEOUT,
     if not text:
         raise RuntimeError("The agent returned no text")
     return text
+
+
+def authorization_for(tool, authorization):
+    """The guest token goes to the booking desk, which exchanges it. The loyalty desk is not given it."""
+    if tool == "ask_booking_desk":
+        return authorization
+    return None
 
 
 def ask_booking_desk(question, authorization, opener=urlopen):
@@ -282,10 +289,10 @@ class DeskHandler(BaseHTTPRequestHandler):
         authorization = self.headers.get("Authorization")
 
         def booking(question, _ignored):
-            return ask_booking_desk(question, authorization)
+            return ask_booking_desk(question, authorization_for("ask_booking_desk", authorization))
 
         def loyalty(question, _ignored):
-            return ask_loyalty_desk(question, authorization)
+            return ask_loyalty_desk(question, authorization_for("ask_loyalty_desk", authorization))
 
         answered = rpc_result(body, booking, loyalty)
         if answered is None:

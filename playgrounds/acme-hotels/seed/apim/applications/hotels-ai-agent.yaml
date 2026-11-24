@@ -1,7 +1,7 @@
 name: Hotels AI Agent
-description: The hotel agent, as a consumer of the hotel API
+description: The booking desk, as a consumer of the hotel API
 
 settings:
   app:
     type: SIMPLE
-    client_id: hotel-ai-agent   # the Access Management client of the agent
+    client_id: acme-hotels-booking-desk   # the Access Management client of the booking desk

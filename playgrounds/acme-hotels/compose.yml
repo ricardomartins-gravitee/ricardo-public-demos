@@ -1,7 +1,7 @@
 # Demo secrets shared by every container that needs them. Change one in the shell or in this playground's .env.
 x-acme-hotels-plus-secrets:
   demo-password: &demo-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_DEMO_PASSWORD:-HelloWorld@123} # Password of John Doe
-  agent-client-secret: &agent-client-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET:-hotel-ai-agent} # Secret of the hotel agent's application in Access Management
+  agent-client-secret: &agent-client-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET:-hotel-ai-agent} # Secret of the booking desk's application in Access Management
   mcp-resource-secret: &mcp-resource-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_RESOURCE_SECRET:-hotel-mcp} # Secret of the booking MCP server's resource in Access Management; letters, digits and dashes only
   apim-password: &apim-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_APIM_PASSWORD:-admin} # Password of user admin in API Management
   am-password: &am-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AM_PASSWORD:-adminadmin} # Password of user admin in Access Management
@@ -101,6 +101,9 @@ services:
     pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
     container_name: gio-acme-hotels-plus-agent
     restart: unless-stopped
+    entrypoint: ["python", "/acme-hotels-plus-forward-subject-token.py"] # Forwards the guest token. The booking desk exchanges it
+    volumes:
+      - ./apps/concierge/forward_subject_token.py:/acme-hotels-plus-forward-subject-token.py:ro
     depends_on:
       acme-hotels-plus-backend:
         condition: service_healthy
@@ -123,9 +126,6 @@ services:
       LLM_MODEL: ollama:gemma4:12b # Provider and model on the LLM proxy
       LLM_TEMPERATURE: "0.3"
       MCP_HTTP_URLS: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_URL:-http://acme-hotels-plus-desk:8088/mcp} # The desks. A value you set replaces this
-      AM_TOKEN_URL: http://am-gateway:8092/acme-hotels/oauth/token # Token endpoint of the Access Management domain
-      AM_CLIENT_ID: hotel-ai-agent # Its application in Access Management
-      AM_CLIENT_SECRET: *agent-client-secret # RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET
     labels:
       io.gravitee.name: Hotel concierge
       io.gravitee.description: The assistant that answers guests and asks the booking desk to search
@@ -162,7 +162,7 @@ services:
       LLM_TEMPERATURE: "0.3"
       MCP_HTTP_URLS: http://apim-gateway:8082/hotels/mcp # The hotels' tools, behind the gateway
       AM_TOKEN_URL: http://am-gateway:8092/acme-hotels/oauth/token # Token endpoint of the Access Management domain
-      AM_CLIENT_ID: hotel-ai-agent # The same application as the concierge
+      AM_CLIENT_ID: acme-hotels-booking-desk # Its application. It alone exchanges the guest's token
       AM_CLIENT_SECRET: *agent-client-secret # RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET
     labels:
       io.gravitee.name: Booking desk

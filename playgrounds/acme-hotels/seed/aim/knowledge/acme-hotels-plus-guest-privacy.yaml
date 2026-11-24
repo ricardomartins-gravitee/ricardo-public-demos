@@ -8,5 +8,5 @@ content: |
   This note is simulated for the demo.
 
   The concierge talks to the guest who is signed in. A hotel search and the list of that guest's bookings
-  go to the booking desk, with the guest's token. The gateway checks each booking. The desk does not read
-  another guest's bookings.
+  go to the booking desk, with the guest's token. The desk exchanges that token. The gateway checks each
+  booking. The loyalty desk is not given the token. The desk does not read another guest's bookings.

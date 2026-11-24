@@ -18,4 +18,4 @@ content: |
   - The day before arrival: one night is kept.
   - The day of arrival: the stay is kept.
 
-  The booking desk searches hotels and lists the signed-in guest's bookings. It acts with that guest's token, and the gateway checks each booking.
+  The booking desk searches hotels and lists the signed-in guest's bookings. It exchanges that guest's token, and the gateway checks each booking.

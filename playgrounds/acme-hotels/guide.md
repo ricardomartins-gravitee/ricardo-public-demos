@@ -1,6 +1,6 @@
 # 🏨 ACME Hotels: expose, secure and govern an AI agent
 
-ACME Hotels built three agents. The concierge answers a guest on the hotel website. When the guest asks for a hotel or for their bookings, the concierge asks the booking desk. The desk searches, and it lists the bookings with the guest's token. When the guest asks for a loyalty offer, the concierge asks the loyalty desk. That desk is registered in the local AWS account as a Bedrock AgentCore runtime. Gravitee calls the desk, and the desk calls back through the gateway for the model and the hotel tools. An *agent* asks a language model what to do, then calls tools.
+ACME Hotels built three agents. The concierge answers a guest on the hotel website. When the guest asks for a hotel or for their bookings, the concierge asks the booking desk. The desk searches, and it lists the bookings after exchanging the guest's token. When the guest asks for a loyalty offer, the concierge asks the loyalty desk. That desk is registered in the local AWS account as a Bedrock AgentCore runtime. Gravitee calls the desk, and the desk calls back through the gateway for the model and the hotel tools. An *agent* asks a language model what to do, then calls tools.
 
 You send a few messages and watch the Gravitee gateway cache, limit, block and authorize them. The agents call `gemma4:12b`. If that call fails, the LLM proxy tries `qwen3:1.7b`. `qwen3:0.6b` stays listed and is not that retry. Agent Management also lists the hotels' tools, the booking desk's prompts and resources, a studio, a workspace and a dashboard. Gemini, OpenAI and Anthropic join that catalog when their keys are set.
 
@@ -15,7 +15,6 @@ flowchart TB
   aws --> llm
   aws --> mcp
   web -.-> am[Access Management]
-  agent -.-> am
   book -.-> am
   rest -.-> authz[Authorization]
   classDef gw stroke:#e8590c,stroke-width:2px
@@ -115,22 +114,20 @@ sequenceDiagram
   You->>AM: password
   AM-->>Web: John's<br/>token
   Web->>A2A: message and<br/>John's token
-  A2A->>Agent: message
-  Agent->>AM: John's token and<br/>the agent's token
-  AM-->>Agent: token for John,<br/>acting through<br/>the agent
-  Agent->>Desk: the question<br/>and that token
-  Desk->>AM: exchange<br/>again
-  AM-->>Desk: the next<br/>delegated token
+  A2A->>Agent: message and<br/>John's token
+  Agent->>Desk: the question<br/>and John's token
+  Desk->>AM: John's token and<br/>the desk's token
+  AM-->>Desk: token for John,<br/>acting through<br/>the desk
   Desk->>API: listBookings
   API->>Authz: may John<br/>view each booking?
   Authz-->>API: the answers<br/>of the policy
 ```
 
-- The concierge does not reuse John's token. It exchanges it at Access Management for a *delegated* token, which names John and the agent as the *acting* client. This is the token exchange of RFC 8693. The booking desk exchanges that token once more. The domain allows a chain of these delegations, and the next token still names John and the same agent.
-- The gateway checks that token, then asks Authorization Management whether John may see each booking.
+- The concierge forwards John's token and has no Access Management client, so it cannot exchange one. The booking desk exchanges that token once, at Access Management. This is the token exchange of RFC 8693. The new token names John, and the *actor* is the booking desk. The domain allows that one delegation and refuses a second.
+- The gateway accepts the call only when the actor is the booking desk and the token names the guest. It then asks Authorization Management whether John may see each booking.
 - The API returns 3 bookings and John sees 2. The policy allows a booking when John owns it. He owns two, and the third belongs to a hotel he is not a guest of.
 - [AM Console](http://localhost:8081), with `admin` / `adminadmin`, shows the domain `acme-hotels`: its applications, John, the booking MCP server and its tools.
-- In the **APIM Console** tab, open the API **ACME Hotels API**, then its plans. The plan **AI Agent** only accepts the delegated token of the agent.
+- In the **APIM Console** tab, open the API **ACME Hotels API**, then its plans. The plan **AI Agent** only accepts the token the booking desk exchanged.
 - In the **Gamma Console** tab, open **Authorization Management**. The policy **A guest views a booking they own** allows a booking when its id is one John owns. **Entities** lists John, the three bookings and the hotels. John owns `BK-0001` and `BK-0002`. `BK-0005` belongs to Imperial Tokyo, and he is not a guest there.
 - [Decisions](http://localhost:8086/environments/default/authz/observe/logs) lists each check the gateway made.
 

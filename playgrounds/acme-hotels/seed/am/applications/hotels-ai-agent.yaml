@@ -1,6 +1,6 @@
-# The hotel agent: it gets its own token with client_credentials, and exchanges the guest's token for a delegated one
+# Kept so a lab seeded earlier loses the exchange. The booking desk is the only client that exchanges.
 name: Hotels AI Agent
-description: The hotel agent, which acts for the guest who chats with it
+description: Retired. The booking desk exchanges the guest's token. This client cannot.
 type: SERVICE
 
 clientId: hotel-ai-agent
@@ -8,18 +8,10 @@ clientSecret: "${AGENT_CLIENT_SECRET}"
 
 oauth:
   grantTypes:
-    - urn:ietf:params:oauth:grant-type:token-exchange
     - client_credentials
   tokenEndpointAuthMethod: client_secret_basic
   pkce: false
-  tokenExchange:
-    inherited: true
-    scopeHandling: downscoping
   tokenValidity:
-    accessToken: 7200
+    accessToken: 900
     refreshToken: 14400
-    idToken: 14400
-  tokenCustomClaims:
-    - tokenType: access_token
-      claimName: email
-      claimValue: "{#context.attributes['user']['username']}"
+    idToken: 900

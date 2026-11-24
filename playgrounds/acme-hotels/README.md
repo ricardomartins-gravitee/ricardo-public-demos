@@ -65,7 +65,7 @@ The two admin settings are the passwords the seed signs in with: set them if you
 
 | Secret | Value | Setting |
 |---|---|---|
-| Access Management application secrets | `hotel-ai-agent`, `hotel-mcp` | `RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET`, `RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_RESOURCE_SECRET` |
+| Booking desk, and the booking MCP | `hotel-ai-agent`, `hotel-mcp` | `RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET`, `RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_RESOURCE_SECRET` |
 
 Set them before the first start. The seed writes the password and the secrets into Access Management when it creates them, and keeps what it finds on later runs, so on a lab that is already set up a new value needs a reset. Write `RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_RESOURCE_SECRET` in letters, digits and dashes: the gateway's script for the bookings, which the seed also writes into the API, uses it in a string.
 
@@ -98,7 +98,7 @@ The demo secrets and passwords are settings too: they are in [Logins and secrets
 | 1 Cache similar questions | Answers a question close in meaning to an earlier one from its cache, without calling the model |
 | 2 Limit tokens | Stops a caller that spent its tokens before the model is reached |
 | 3 Block risky prompts | Reads each prompt with a small model and rejects the malicious ones |
-| 4 Sign in and authorize | Accepts only the token that the agent got by exchange, and filters the bookings with Authorization Management |
+| 4 Sign in and authorize | Accepts only the token the booking desk got by exchange, and filters the bookings with Authorization Management |
 | 5 Look at the agent's tools | Turns the hotels' REST API into MCP tools that any MCP client finds |
 | 6 Ask the booking desk | The concierge has no hotel search. A hotel question calls the booking desk, through the gateway |
 | 7 Walk the Agent Management catalog | Shows the agents, the local models, the tools, the prompts and resources, the studio, the workspace and the dashboard |

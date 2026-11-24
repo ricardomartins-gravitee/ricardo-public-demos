@@ -1,0 +1,26 @@
+# The booking desk exchanges the guest's token when it calls the hotels API. The concierge has no client.
+name: Booking desk
+description: The booking desk, which acts for the guest when it lists bookings
+type: SERVICE
+
+clientId: acme-hotels-booking-desk
+clientSecret: "${AGENT_CLIENT_SECRET}"
+
+oauth:
+  grantTypes:
+    - urn:ietf:params:oauth:grant-type:token-exchange
+    - client_credentials
+  tokenEndpointAuthMethod: client_secret_basic
+  pkce: false
+  tokenExchange:
+    inherited: true
+    scopeHandling: downscoping
+  # The exchange runs before the model answers, and a cold model can take a few minutes
+  tokenValidity:
+    accessToken: 900
+    refreshToken: 14400
+    idToken: 900
+  tokenCustomClaims:
+    - tokenType: access_token
+      claimName: email
+      claimValue: "{#context.attributes['user']['username']}"

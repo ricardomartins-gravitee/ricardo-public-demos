@@ -264,17 +264,17 @@
           "request": [
             {
               "name": "Interrupt",
-              "description": "Verify that the request is made by the AI Agent acting on behalf of a user via OAuth 2.0 token exchange (delegated access). Rejects requests missing a valid act.sub claim or user email.",
+              "description": "Accepts a token the booking desk exchanged for the guest. Refuses a token with no actor, another actor, a second delegation, or no guest.",
               "enabled": true,
               "policy": "policy-interrupt",
               "configuration": {
                 "errorKey": "AI_AGENT_DELEGATED_ACCESS_REQUIRED",
                 "variables": [],
                 "scope": "REQUEST",
-                "message": "Access denied: this endpoint requires a delegated access token issued to the AI Agent on behalf of an authenticated user.",
+                "message": "Access denied: this endpoint requires a token the booking desk exchanged for the signed-in guest.",
                 "statusCode": 403
               },
-              "condition": "{#context.attributes['jwt.claims']['act']?.['sub'] != 'hotel-ai-agent' || #context.attributes['jwt.claims']['email'] == null}"
+              "condition": "{#context.attributes['jwt.claims']['act']?.['sub'] != 'acme-hotels-booking-desk' || #context.attributes['jwt.claims']['act']?.['act'] != null || #context.attributes['jwt.claims']['email'] == null}"
             },
             {
               "name": "Transform Headers",
