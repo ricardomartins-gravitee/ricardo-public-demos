@@ -1,0 +1,5 @@
+server: Specialty Underwriting MCP
+tools:
+  - get_submission_context
+  - mark_ready_for_quote
+sync: access-management

@@ -1,0 +1,170 @@
+# Demo secrets. Change one in the shell or in this playground's .env.
+x-specialty-underwriting-delegated-review-secrets:
+  demo-password: &demo-password ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_DEMO_PASSWORD:-HelloWorld@123} # Password of Casey Hale and Jordan Clerk
+  web-secret: &web-secret ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_WEB_CLIENT_SECRET:-specialty-web-demo} # Secret of the review page in Access Management
+  agent-secret: &agent-secret ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_AGENT_CLIENT_SECRET:-cyber-review-agent-demo} # Secret of cyber-review-agent
+  mcp-secret: &mcp-secret ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_MCP_RESOURCE_SECRET:-specialty-mcp-demo} # Secret of the submission MCP resource; letters, digits and dashes only
+  control-token: &control-token ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_CONTROL_TOKEN:-specialty-demo-control} # Token for the private reset and observation calls
+  apim-password: &apim-password ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_APIM_PASSWORD:-admin} # Password of user admin in API Management
+  am-password: &am-password ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_AM_PASSWORD:-adminadmin} # Password of user admin in Access Management
+  web-url: &web-url ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_WEB_URL:-http://localhost:8170} # Review page as the browser opens it
+  web-loopback: &web-loopback ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_WEB_LOOPBACK_URL:-http://127.0.0.1:8170} # Review page on the loopback name
+
+x-gravitee:
+  kind: playground
+  name: Specialty Underwriting Delegated Review
+  category: AI
+  description: Delegated review of one synthetic cyber submission, with the gateway deciding each tool call
+  tags: [AI Agents, MCP, Authorization, Token Exchange]
+  duration: 15 min
+  first_start: 8 min
+  requires:
+    images:
+      APIM_VERSION: "4.13"
+      AM_VERSION: "4.13"
+    license:
+      gamma-aim-module: The submission server in the agent catalog
+      apim-mcp-proxy-reactor: The MCP proxy that enforces each tool call
+  consoles: [specialty-underwriting-delegated-review-presenter, gamma-ui]
+  accounts:
+    - for: "Review page: Casey Hale (cyber underwriter)"
+      username: casey.hale@specialty-underwriting.test
+      password: *demo-password
+    - for: "Review page: Jordan Clerk (no underwriter group)"
+      username: jordan.clerk@specialty-underwriting.test
+      password: *demo-password
+    - for: Gamma and API Management consoles
+      username: admin
+      password: *apim-password
+    - for: Access Management console
+      username: admin
+      password: *am-password
+
+x-specialty-underwriting-delegated-review-healthcheck: &healthcheck
+  interval: 5s
+  timeout: 3s
+  retries: 20
+
+services:
+
+  specialty-underwriting-delegated-review-submissions:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/specialty-underwriting-delegated-review-submissions:latest
+    build: ./apps/submissions
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_PULL_POLICY:-build} # build: build it here at each start; never: build it here once; always: pull it, build it here if it cannot be pulled
+    container_name: gio-specialty-underwriting-delegated-review-submissions
+    restart: unless-stopped
+    environment:
+      HTTP_PORT: "8000"
+      CONTROL_TOKEN: *control-token # Private reset and observation
+    labels:
+      io.gravitee.name: Submission service
+      io.gravitee.description: Synthetic cyber submission and its private MCP endpoint
+      io.gravitee.group: API Management
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+    networks: [internal]
+
+  specialty-underwriting-delegated-review-agent:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/specialty-underwriting-delegated-review-agent:latest
+    build: ./apps/agent
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_PULL_POLICY:-build} # build: build it here at each start; never: build it here once; always: pull it, build it here if it cannot be pulled
+    container_name: gio-specialty-underwriting-delegated-review-agent
+    restart: unless-stopped
+    environment:
+      HTTP_PORT: "8000"
+      TOKEN_URL: http://am-gateway:8092/specialty-underwriting/oauth/token # Access Management token endpoint
+      CLIENT_ID: cyber-review-agent # Registered hosted agent
+      CLIENT_SECRET: *agent-secret # Secret of cyber-review-agent
+      EXPECTED_ACTOR: cyber-review-agent # act.sub the exchange must name
+      RESOURCE_URL: http://apim-gateway:8082/specialty-underwriting/mcp # Resource indicator on the exchange
+      ALLOWED_AUDIENCES: http://localhost:8082/specialty-underwriting/mcp,http://apim-gateway:8082/specialty-underwriting/mcp,specialty-underwriting-mcp # Audiences the delegated token may carry
+      GATEWAY_MCP_URL: http://apim-gateway:8082/specialty-underwriting/mcp # MCP proxy the agent calls
+    labels:
+      io.gravitee.name: Review agent
+      io.gravitee.description: Exchanges a delegated token and calls the gateway
+      io.gravitee.group: API Management
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+    networks: [internal]
+
+  specialty-underwriting-delegated-review-presenter:
+    image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/specialty-underwriting-delegated-review-presenter:latest
+    build: ./apps/presenter
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_PULL_POLICY:-build} # build: build it here at each start; never: build it here once; always: pull it, build it here if it cannot be pulled
+    container_name: gio-specialty-underwriting-delegated-review-presenter
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8170:8000" # Review page
+    environment:
+      HTTP_PORT: "8000"
+      ALLOWED_HOSTS: specialty-underwriting-delegated-review-presenter,localhost,127.0.0.1 # Host names the page answers
+      AM_PUBLIC_ISSUER: http://localhost:8092/specialty-underwriting # Access Management as the browser reaches it
+      TOKEN_URL: http://am-gateway:8092/specialty-underwriting/oauth/token # Token endpoint the page's server calls
+      WEB_CLIENT_ID: specialty-underwriting-web # Review page client
+      WEB_CLIENT_SECRET: *web-secret # Secret of the review page client
+      REDIRECT_URL: http://localhost:8170/callback # Where Access Management sends the browser back
+      AGENT_URL: http://specialty-underwriting-delegated-review-agent:8000 # Agent runner
+      GATEWAY_MCP_URL: http://apim-gateway:8082/specialty-underwriting/mcp # MCP proxy for the underwriter's own call
+      SUBMISSIONS_URL: http://specialty-underwriting-delegated-review-submissions:8000 # Private observation and reset
+      CONTROL_TOKEN: *control-token # Private reset and observation
+      DECISIONS_URL: http://localhost:8086/environments/DEFAULT/authz/decisions # Gamma decisions for the correlation id
+    labels:
+      io.gravitee.name: Review page
+      io.gravitee.description: Underwriter review of one synthetic cyber submission
+      io.gravitee.group: API Management
+      io.gravitee.console.specialty-underwriting-delegated-review-presenter.name: Review page
+      io.gravitee.console.specialty-underwriting-delegated-review-presenter.url: http://localhost:8170
+    healthcheck:
+      <<: *healthcheck
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+    networks: [internal]
+
+  specialty-underwriting-delegated-review-seed:
+    image: ghcr.io/gravitee-io-labs/gravitee-lab/seeder:latest
+    build: ../../../../../seeder
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_SPECIALTY_UNDERWRITING_DELEGATED_REVIEW_PULL_POLICY:-build} # build: build it here at each start; never: build it here once; always: pull it, build it here if it cannot be pulled
+    container_name: gio-specialty-underwriting-delegated-review-seed
+    restart: "no"
+    depends_on:
+      apim-management-api:
+        condition: service_healthy
+      apim-gateway:
+        condition: service_healthy
+      am-management-api:
+        condition: service_healthy
+      am-gateway:
+        condition: service_healthy
+      specialty-underwriting-delegated-review-submissions:
+        condition: service_healthy
+    volumes:
+      - ./seed:/seed:ro
+      - ./.state:/state # What the seed created, to remove it later
+    environment:
+      APIM_MANAGEMENT_URL: http://apim-management-api:8083
+      APIM_USERNAME: admin
+      APIM_PASSWORD: *apim-password
+      AM_MANAGEMENT_URL: http://am-management-api:8093
+      AM_USERNAME: admin
+      AM_PASSWORD: *am-password
+      AM_GATEWAY_URL: http://am-gateway:8092 # Access Management as the gateway reaches it
+      AM_PUBLIC_URL: http://localhost:8092 # Access Management as the browser reaches it
+      APIM_GATEWAY_URL: http://localhost:8082 # Gateway as the browser reaches it
+      GATEWAY_INTERNAL_URL: http://apim-gateway:8082 # Gateway as the seed reaches it
+      GATEWAY_READY_TIMEOUT: "120" # Seconds the seed waits for the gateway
+      DEMO_PASSWORD: *demo-password
+      WEB_CLIENT_SECRET: *web-secret
+      AGENT_CLIENT_SECRET: *agent-secret
+      MCP_RESOURCE_SECRET: *mcp-secret
+      WEB_URL: *web-url
+      WEB_LOOPBACK_URL: *web-loopback
+      SUBMISSIONS_ORIGIN: http://specialty-underwriting-delegated-review-submissions:8000 # Submission service as the gateway and the seed reach it
+      PUBLIC_MCP_URL: http://localhost:8082/specialty-underwriting/mcp # MCP proxy as the browser reaches it
+      INTERNAL_MCP_URL: http://apim-gateway:8082/specialty-underwriting/mcp # MCP proxy as a container reaches it
+    labels:
+      io.gravitee.name: Playground seed
+      io.gravitee.description: Creates the domain, the agent, the MCP proxy and the authorization policies
+      io.gravitee.group: API Management
+      io.gravitee.role: seed
+    networks: [internal]

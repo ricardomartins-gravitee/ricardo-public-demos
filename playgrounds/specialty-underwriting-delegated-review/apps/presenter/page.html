@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Specialty underwriting review</title>
+  <style>
+    :root { color-scheme: light dark; font-family: "Iowan Old Style", Palatino, Georgia, serif; }
+    body { margin: 0 auto; max-width: 42rem; padding: 1.5rem 1.25rem 3rem; line-height: 1.45; }
+    h1 { font-size: 1.4rem; font-weight: 600; margin: 0 0 0.25rem; }
+    p, li { font-family: "Avenir Next", "Segoe UI", sans-serif; }
+    button { font: inherit; padding: 0.4rem 0.7rem; margin: 0 0.4rem 0.4rem 0; }
+    .row { margin: 1rem 0; }
+    pre { white-space: pre-wrap; padding: 0.75rem; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); }
+    .muted { opacity: 0.75; }
+  </style>
+</head>
+<body>
+  <h1>Specialty underwriting review</h1>
+  <p class="muted" id="who">Not signed in. The submission stays on the private service until a signed-in call reaches the gateway.</p>
+  <div class="row">
+    <button type="button" id="sign-in">Sign in</button>
+    <button type="button" id="read">Read context through agent</button>
+    <button type="button" id="agent-mark">Mark ready through agent</button>
+    <button type="button" id="human-mark">Mark ready myself</button>
+    <button type="button" id="reset">Reset demo</button>
+  </div>
+  <p id="status"></p>
+  <pre id="evidence">No call yet.</pre>
+  <script>
+    const LAB = ["http://localhost:9000", "http://127.0.0.1:9000"];
+    const evidence = document.querySelector("#evidence");
+    const status = document.querySelector("#status");
+    const who = document.querySelector("#who");
+
+    function show(body) {
+      const identity = body.identity || {};
+      const submission = body.submission || {};
+      const lines = [
+        body.failed_closed ? "Failed closed before the gateway: " + (body.reason || "") : "Gateway HTTP " + (body.http_status ?? ""),
+        "Source: " + (body.source || ""),
+        "iss: " + (identity.iss || ""),
+        "sub: " + (identity.sub || ""),
+        "act.sub: " + (identity.act_sub || ""),
+        "scope: " + (identity.scope || ""),
+        "expires in seconds: " + (identity.expires_in ?? ""),
+        "lifetime seconds: " + (identity.lifetime_seconds ?? ""),
+        "correlation: " + (body.correlation_id || ""),
+        "status: " + (submission.status || ""),
+        "write handler calls: " + (submission.write_handler_calls ?? ""),
+      ];
+      if (body.mcp && body.mcp.error) lines.push("MCP error: " + (body.mcp.error.message || body.mcp.error.code));
+      evidence.textContent = lines.join("\n");
+      status.textContent = body.ok ? "Allowed." : (body.failed_closed ? "Stopped." : "Denied or incomplete.");
+      if (body.correlation_id && body.decisions_url) openDecisions(body.decisions_url);
+    }
+
+    function openDecisions(url) {
+      if (window.parent !== window) {
+        for (const origin of LAB) parent.postMessage({type: "gravitee-lab:open", url}, origin);
+      }
+    }
+
+    async function post(path) {
+      const response = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+      show(await response.json());
+    }
+
+    async function refresh() {
+      const body = await (await fetch("/api/session")).json();
+      if (!body.signed_in) {
+        who.textContent = "Not signed in.";
+        return;
+      }
+      const identity = body.identity || {};
+      who.textContent = "Signed in. sub " + identity.sub + ". Token lifetime " + (identity.lifetime_seconds ?? "") + " seconds, " + identity.expires_in + " seconds left.";
+    }
+
+    document.querySelector("#sign-in").onclick = async () => {
+      const body = await (await fetch("/api/sign-in/start", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"})).json();
+      window.open(body.authorize_url, "specialty-underwriting-sign-in", "popup,width=480,height=720");
+    };
+    document.querySelector("#read").onclick = () => post("/api/read-through-agent");
+    document.querySelector("#agent-mark").onclick = () => post("/api/mark-through-agent");
+    document.querySelector("#human-mark").onclick = () => post("/api/mark-myself");
+    document.querySelector("#reset").onclick = () => post("/api/reset");
+    addEventListener("message", (event) => {
+      if (event.origin === location.origin && event.data && event.data.type === "specialty-underwriting:signed-in") refresh();
+      if (event.source === parent && LAB.includes(event.origin) && event.data && event.data.type === "gravitee-lab:action") {
+        const id = event.data.id;
+        if (id === "sign-in") document.querySelector("#sign-in").click();
+        if (id === "read-through-agent") document.querySelector("#read").click();
+        if (id === "mark-through-agent") document.querySelector("#agent-mark").click();
+        if (id === "mark-myself") document.querySelector("#human-mark").click();
+        if (id === "reset-demo") document.querySelector("#reset").click();
+      }
+    });
+    for (const origin of LAB) parent.postMessage({type: "gravitee-lab:ready"}, origin);
+    parent.postMessage({type: "gravitee-lab:location", url: location.href}, location.ancestorOrigins && location.ancestorOrigins.length ? location.ancestorOrigins[0] : "http://localhost:9000");
+    history.replaceState(null, "", location.pathname);
+    refresh();
+  </script>
+</body>
+</html>

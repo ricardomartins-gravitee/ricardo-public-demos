@@ -1,0 +1,95 @@
+# Sign-in with Access Management, then one authorization check on every tools/call.
+# Both tools stay listed. The agent is denied on the write by policy, not by hiding the tool.
+server: Specialty Underwriting MCP
+
+automation:
+  hrid: specialty-underwriting-mcp-proxy
+  entityId: mcp-proxy.specialty-underwriting
+  name: Specialty underwriting submissions
+  description: Synthetic cyber submission tools for a signed-in reviewer or the review agent
+  contextPath: /specialty-underwriting/mcp
+  mode: PROXY
+  proxy:
+    serverUrl: ${SUBMISSIONS_ORIGIN}
+  state: STARTED
+  identityProviders:
+    - name: specialty-underwriting-am
+      type: OAUTH2_GENERIC
+      issuerUrl: ${AM_GATEWAY_URL}/specialty-underwriting
+      introspectionEndpoint: /oauth/introspect
+      introspectionEndpointMethod: POST
+      clientId: specialty-underwriting-mcp
+      clientSecret: "${MCP_RESOURCE_SECRET}"
+  plans:
+    - name: Signed-in reviewers
+      security: {type: OAUTH2, provider: specialty-underwriting-am}
+  flows:
+    - name: Only the MCP endpoint
+      selectors: [{type: CONDITION, condition: "{#request.pathInfo != '' && #request.pathInfo != '/'}"}]
+      request:
+        - name: Nothing else is served
+          description: Answers 404 to any path that is not the MCP endpoint
+          policy: mock
+          enabled: true
+          configuration:
+            status: "404"
+            content: '{"message":"Not Found","http_status_code":404}'
+            headers: [{name: Content-Type, value: application/json}]
+
+    - name: Authorization
+      selectors: [{type: MCP, methods: [tools/call]}]
+      request:
+        - name: Read the submission id
+          description: Passes the submission id into the authorization decision
+          policy: policy-assign-attributes
+          enabled: true
+          configuration:
+            scope: REQUEST
+            attributes:
+              - name: authz_submission_id
+                value: "{#jsonPath(#request.content, '$.params.arguments.submission_id')}"
+        - name: Fine-grained authorization
+          description: Asks Authorization Management whether this person, or the agent acting for them, may call this tool
+          policy: authz-pep
+          enabled: true
+          configuration:
+            subjectType: User
+            subjectExpr: "{#jsonPath(#context.attributes['oauth.payload'], '$.sub')}"
+            actionExpr: &tool "{#context.attributes['mcp_tool_name'] != null ? '<slug>.' + #context.attributes['mcp_tool_name'] : ''}"
+            resourceType: MCPTool
+            resourceExpr: *tool
+            contextExpr:
+              - {name: submission_id, value: "{#context.attributes['authz_submission_id']}"}
+            agentResolution: AUTO
+            denyStatus: 403
+            denyMessage: Not allowed by specialty underwriting authorization
+            logDecisions: true
+            evalTimeoutMs: 250
+            noSnapshotPolicy: RETRY_THEN_DENY
+            noSnapshotMaxWaitMs: 3000
+            noSnapshotRetryDelayMs: 100
+
+securityConfiguration:
+  Signed-in reviewers:
+    extractPayload: true
+
+responseTemplates:
+  GAPL_AUTHZ:
+    "*/*":
+      statusCode: 403
+      headers: {Content-Type: application/json}
+      body: |-
+        {"jsonrpc":"2.0","id":null,"error":{"code":-32001,"message":"Not allowed by specialty underwriting authorization","data":{"action":"{#parameters['action']}","subject":"{#parameters['subjectId']}","requestId":"{#parameters['requestId']}"}}}
+
+readTimeout: 15000
+
+analytics:
+  logging:
+    mode: {entrypoint: true, endpoint: true}
+    phase: {request: true, response: true}
+    content: {headers: false, payload: false}
+  tracing: {enabled: true, verbose: false}
+  otelLogs: {enabled: false}
+
+supportedProtocolVersions: ["2025-11-25"]
+endpointProtocolVersions: ["2025-11-25"]

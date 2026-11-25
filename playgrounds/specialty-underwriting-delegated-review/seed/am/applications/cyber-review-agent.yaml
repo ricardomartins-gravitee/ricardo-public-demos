@@ -1,0 +1,20 @@
+# Hosted review agent. Its kind grants client credentials and token exchange.
+# The runner uses those two grants. It does not send the underwriter token to the gateway.
+name: Cyber review agent
+description: Hosted agent that reads a submission for the signed-in underwriter
+type: AGENT
+kind: HOSTED_DELEGATED
+
+clientId: cyber-review-agent
+clientSecret: "${AGENT_CLIENT_SECRET}"
+
+redirectUris:
+  - "${WEB_URL}/callback"
+
+scopes:
+  - "submission:read"
+
+oauth:
+  tokenCustomClaims:
+    - claimName: username
+      claimValue: "{#context.attributes['user']['username']}"

@@ -1,0 +1,35 @@
+# The review page. Authorization code and PKCE only: the password grant is not on this client.
+name: Specialty underwriting review
+description: Signs a reviewer in at Access Management
+type: WEB
+
+clientId: specialty-underwriting-web
+clientSecret: "${WEB_CLIENT_SECRET}"
+
+redirectUris:
+  - "${WEB_URL}/callback"
+  - "${WEB_LOOPBACK_URL}/callback"
+
+scopes:
+  - openid
+  - profile
+  - email
+  - "submission:read"
+  - "submission:mark-ready"
+
+skipConsent: true
+
+oauth:
+  grantTypes:
+    - authorization_code
+    - refresh_token
+  responseTypes:
+    - code
+  pkce: true
+  tokenValidity:
+    accessToken: 600
+    refreshToken: 1200
+    idToken: 600
+  tokenCustomClaims:
+    - claimName: username
+      claimValue: "{#context.attributes['user']['username']}"

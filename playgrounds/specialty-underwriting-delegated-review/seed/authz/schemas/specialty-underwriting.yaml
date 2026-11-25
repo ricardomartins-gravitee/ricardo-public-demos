@@ -1,0 +1,17 @@
+name: Specialty underwriting
+schema: |
+  entity Group {};
+  entity User in [Group] {};
+  entity AgentIdentity {};
+  entity MCPServer {};
+  entity MCPTool in [MCPServer] {};
+  action "<server>.get_submission_context" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: { agent?: AgentIdentity, submission_id?: String }
+  };
+  action "<server>.mark_ready_for_quote" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: { agent?: AgentIdentity, submission_id?: String }
+  };

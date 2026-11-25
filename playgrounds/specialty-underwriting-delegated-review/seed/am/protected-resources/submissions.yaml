@@ -1,0 +1,20 @@
+name: Specialty underwriting submissions
+description: Synthetic submission tools behind the gateway
+type: MCP_SERVER
+
+resourceIdentifiers:
+  - "${PUBLIC_MCP_URL}"
+  - "${INTERNAL_MCP_URL}"
+
+clientId: specialty-underwriting-mcp
+clientSecret: "${MCP_RESOURCE_SECRET}"
+
+tools:
+  - key: get_submission_context
+    description: Read one synthetic specialty submission
+    type: MCP_TOOL
+    scopes: []
+  - key: mark_ready_for_quote
+    description: Mark one synthetic submission ready for quote
+    type: MCP_TOOL
+    scopes: []
