@@ -201,6 +201,16 @@ class Handler(BaseHTTPRequestHandler):
             record = session_from(self.headers.get("Cookie"))
             self._json(200, {"signed_in": bool(record), "identity": None if not record else record["summary"], "decisions_url": DECISIONS})
             return
+        if path == "/api/desk":
+            record = session_from(self.headers.get("Cookie"))
+            status, observed = _json_request(SUBMISSIONS + "/demo/observation", headers={"X-Demo-Control": CONTROL}, method="GET")
+            self._json(200, {
+                "signed_in": bool(record),
+                "identity": None if not record else record["summary"],
+                "decisions_url": DECISIONS,
+                "submission": observed if status == 200 and isinstance(observed, dict) else None,
+            })
+            return
         if path == "/callback":
             self._callback()
             return

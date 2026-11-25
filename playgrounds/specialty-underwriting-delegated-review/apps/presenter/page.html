@@ -3,56 +3,494 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Specialty underwriting review</title>
+  <title>Cyber desk</title>
   <style>
-    :root { color-scheme: light dark; font-family: "Iowan Old Style", Palatino, Georgia, serif; }
-    body { margin: 0 auto; max-width: 42rem; padding: 1.5rem 1.25rem 3rem; line-height: 1.45; }
-    h1 { font-size: 1.4rem; font-weight: 600; margin: 0 0 0.25rem; }
-    p, li { font-family: "Avenir Next", "Segoe UI", sans-serif; }
-    button { font: inherit; padding: 0.4rem 0.7rem; margin: 0 0.4rem 0.4rem 0; }
-    .row { margin: 1rem 0; }
-    pre { white-space: pre-wrap; padding: 0.75rem; border: 1px solid color-mix(in srgb, CanvasText 20%, transparent); }
-    .muted { opacity: 0.75; }
+    :root {
+      color-scheme: light;
+      --paper: #f3efe6;
+      --card: #fbf9f4;
+      --ink: #1c1915;
+      --muted: #5e584e;
+      --line: #ddd6c8;
+      --accent: #1f4d3a;
+      --review: #8a5a12;
+      --ready: #1f4d3a;
+      --denied: #8c2f2f;
+      --allowed: #1f4d3a;
+      --stopped: #5e584e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+    button, input { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-end;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--line);
+      background: var(--card);
+    }
+    .kicker {
+      margin: 0;
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    h1 {
+      margin: 0.1rem 0 0;
+      font-family: "Iowan Old Style", Palatino, Georgia, serif;
+      font-size: 1.45rem;
+      font-weight: 600;
+    }
+    .top-side { text-align: right; }
+    #who { margin: 0 0 0.35rem; color: var(--muted); }
+    .ghost {
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0.28rem 0.7rem;
+    }
+    .bench {
+      display: grid;
+      grid-template-columns: 210px minmax(0, 1fr) 360px;
+      min-height: calc(100vh - 74px);
+    }
+    aside, main { min-width: 0; }
+    .queue, .people {
+      padding: 1rem 0.9rem 2rem;
+      background: #ebe6dc;
+    }
+    .people { border-left: 1px solid var(--line); background: #efeae0; }
+    .queue { border-right: 1px solid var(--line); }
+    h2 {
+      margin: 0 0 0.75rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .file-card {
+      width: 100%;
+      text-align: left;
+      background: var(--card);
+      border: 1px solid var(--ink);
+      border-radius: 8px;
+      padding: 0.75rem;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+    .file-card strong { display: block; font-size: 1rem; }
+    .file-card span, .meta { color: var(--muted); font-size: 0.85rem; }
+    .pill {
+      display: inline-block;
+      margin-top: 0.45rem;
+      padding: 0.12rem 0.45rem;
+      border-radius: 999px;
+      background: #f3e2c4;
+      color: var(--review);
+      font-size: 0.75rem;
+      font-weight: 650;
+      white-space: nowrap;
+      flex: none;
+    }
+    .pill.ready { background: #d7ebe1; color: var(--ready); }
+    .file {
+      padding: 1.1rem 1.35rem 2.5rem;
+    }
+    .file-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      align-items: flex-start;
+      padding-bottom: 0.9rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .account {
+      margin: 0.15rem 0;
+      font-family: "Iowan Old Style", Palatino, Georgia, serif;
+      font-size: 1.85rem;
+      font-weight: 600;
+      line-height: 1.1;
+    }
+    .note { margin: 0.35rem 0 0; color: var(--muted); max-width: 38rem; }
+    .sections {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+    section {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.8rem 0.9rem;
+    }
+    section.wide { grid-column: 1 / -1; }
+    h3 { margin: 0 0 0.45rem; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+    .empty { margin: 0; color: var(--muted); }
+    dl { margin: 0; }
+    .fact, .pair { display: grid; grid-template-columns: 9.5rem 1fr; gap: 0.35rem 0.75rem; padding: 0.28rem 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; }
+    .person {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0.8rem;
+      margin-bottom: 0.75rem;
+    }
+    .person header { display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.45rem; }
+    .mark {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--ink);
+      color: var(--paper);
+      font-size: 0.72rem;
+      font-weight: 700;
+      flex: none;
+    }
+    .person.agent .mark { background: var(--accent); }
+    .person h3 { margin: 0; letter-spacing: 0; text-transform: none; color: var(--ink); font-size: 0.95rem; }
+    .person h3.band {
+      margin: 0.65rem 0 0.15rem;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .role { margin: 0; color: var(--muted); font-size: 0.8rem; }
+    .person p { margin: 0.35rem 0 0.6rem; }
+    .id { margin: 0 0 0.35rem; }
+    .id div {
+      display: grid;
+      grid-template-columns: 6.4rem minmax(0, 1fr);
+      gap: 0.12rem 0.45rem;
+      padding: 0.14rem 0;
+      font-size: 0.8rem;
+    }
+    .id dd { overflow-wrap: anywhere; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .primary, .secondary {
+      border-radius: 6px;
+      padding: 0.38rem 0.65rem;
+    }
+    .primary { background: var(--ink); color: #fbf9f4; border: 1px solid var(--ink); }
+    .secondary { background: transparent; border: 1px solid var(--ink); }
+    .event { border-left: 3px solid var(--line); padding: 0.15rem 0 0.7rem 0.75rem; margin: 0.35rem 0 0.7rem; }
+    .event.allowed { border-color: var(--allowed); }
+    .event.denied { border-color: var(--denied); }
+    .event header { display: flex; flex-wrap: wrap; gap: 0.45rem 0.8rem; align-items: baseline; }
+    .event header strong { font-size: 0.95rem; }
+    .event header span:not(.outcome) { white-space: nowrap; }
+    .outcome { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+    .event.allowed .outcome { color: var(--allowed); }
+    .event.denied .outcome { color: var(--denied); }
+    .event.stopped .outcome { color: var(--stopped); }
+    .grid { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.15rem 0.75rem; margin-top: 0.35rem; }
+    .grid div { display: contents; }
+    .grid dt { font-size: 0.75rem; }
+    .grid dd { font-size: 0.82rem; overflow-wrap: anywhere; }
+    @media (max-width: 980px) {
+      .bench { grid-template-columns: 1fr; }
+      .queue, .people { border: 0; }
+      .sections { grid-template-columns: 1fr; }
+      .top { align-items: flex-start; }
+      .top-side { text-align: left; }
+    }
   </style>
 </head>
 <body>
-  <h1>Specialty underwriting review</h1>
-  <p class="muted" id="who">Not signed in. The submission stays on the private service until a signed-in call reaches the gateway.</p>
-  <div class="row">
-    <button type="button" id="sign-in">Sign in</button>
-    <button type="button" id="read">Read context through agent</button>
-    <button type="button" id="agent-mark">Mark ready through agent</button>
-    <button type="button" id="human-mark">Mark ready myself</button>
-    <button type="button" id="reset">Reset demo</button>
+  <header class="top">
+    <div>
+      <p class="kicker">Cyber · one file</p>
+      <h1>Underwriting desk</h1>
+    </div>
+    <div class="top-side">
+      <p id="who">No underwriter on this file.</p>
+      <button type="button" class="ghost" id="reset">Restore file</button>
+    </div>
+  </header>
+  <div class="bench">
+    <aside class="queue">
+      <h2>On the desk</h2>
+      <article class="file-card">
+        <strong>CYB-001</strong>
+        <span id="queue-name">Account not retrieved</span>
+        <div><span class="pill" id="queue-status">Status unknown</span></div>
+      </article>
+      <p class="note">The only submission on this desk. Marking it ready does not quote or bind coverage.</p>
+    </aside>
+    <main class="file">
+      <div class="file-head">
+        <div>
+          <p class="kicker">Submission</p>
+          <p class="account" id="applicant">Context not on the file</p>
+          <p class="meta" id="file-meta">CYB-001 · Cyber · synthetic</p>
+        </div>
+        <div><span class="pill" id="file-status">Status unknown</span></div>
+      </div>
+      <div class="sections">
+        <section>
+          <h3>Controls</h3>
+          <dl id="controls"><p class="empty">The agent has not retrieved them.</p></dl>
+        </section>
+        <section>
+          <h3>Referral</h3>
+          <p class="empty" id="referral">The agent has not retrieved it.</p>
+        </section>
+        <section class="wide">
+          <h3>What reached the gateway</h3>
+          <p class="meta" id="writes">Write handler calls —</p>
+          <div id="activity"><p class="empty">No call yet. The agent reads the file. The underwriter marks it ready. The gateway decides each one.</p></div>
+        </section>
+      </div>
+    </main>
+    <aside class="people">
+      <h2>Registered on this file</h2>
+      <p class="note">Both are applications in Access Management, domain <strong>specialty-underwriting</strong>. Delegation is on. Impersonation is off. An exchange cannot add a scope.</p>
+      <article class="person">
+        <header>
+          <span class="mark" id="uw-mark">—</span>
+          <div>
+            <h3>Underwriter</h3>
+            <p class="role" id="uw-role">Not signed in</p>
+          </div>
+        </header>
+        <h3 class="band">Registration</h3>
+        <dl class="id">
+          <div><dt>Client</dt><dd>specialty-underwriting-web</dd></div>
+          <div><dt>Type</dt><dd>WEB</dd></div>
+          <div><dt>Grant</dt><dd>Authorization code and PKCE</dd></div>
+          <div><dt>Scopes</dt><dd>openid, profile, email, submission:read, submission:mark-ready</dd></div>
+          <div><dt>Actor</dt><dd>None. This token is the person.</dd></div>
+          <div><dt>Permit</dt><dd>Group cyber-underwriters</dd></div>
+        </dl>
+        <h3 class="band">This session</h3>
+        <dl class="id">
+          <div><dt>sub</dt><dd id="uw-sub">Not signed in</dd></div>
+          <div><dt>iss</dt><dd id="uw-iss">—</dd></div>
+          <div><dt>scope</dt><dd id="uw-scope">—</dd></div>
+          <div><dt>Expires</dt><dd id="uw-exp">—</dd></div>
+        </dl>
+        <div class="actions">
+          <button type="button" class="primary" id="sign-in">Sign in</button>
+          <button type="button" class="secondary" id="human-mark">Mark ready for quote</button>
+        </div>
+      </article>
+      <article class="person agent">
+        <header>
+          <span class="mark">CR</span>
+          <div>
+            <h3>Cyber review agent</h3>
+            <p class="role">The only agent on this desk</p>
+          </div>
+        </header>
+        <h3 class="band">Registration</h3>
+        <dl class="id">
+          <div><dt>Client</dt><dd>cyber-review-agent</dd></div>
+          <div><dt>Type</dt><dd>AGENT</dd></div>
+          <div><dt>Kind</dt><dd>HOSTED_DELEGATED</dd></div>
+          <div><dt>Granted</dt><dd>submission:read</dd></div>
+          <div><dt>Not granted</dt><dd>submission:mark-ready</dd></div>
+          <div><dt>Actor</dt><dd>cyber-review-agent</dd></div>
+          <div><dt>Depth</dt><dd>1. The actor cannot delegate again.</dd></div>
+          <div><dt>May call</dt><dd>get_submission_context</dd></div>
+          <div><dt>Refused</dt><dd>mark_ready_for_quote when the token has an actor</dd></div>
+        </dl>
+        <h3 class="band">Identity on the last call</h3>
+        <dl class="id">
+          <div><dt>act.sub</dt><dd id="ag-act">No call yet</dd></div>
+          <div><dt>sub</dt><dd id="ag-sub">The underwriter, once a call is made</dd></div>
+          <div><dt>iss</dt><dd id="ag-iss">—</dd></div>
+          <div><dt>scope</dt><dd id="ag-scope">—</dd></div>
+          <div><dt>Expires</dt><dd id="ag-exp">—</dd></div>
+        </dl>
+        <p>act.sub is the agent. sub is the person it acts for. The two stay different. Gamma lists this agent when Agent Identity is linked to this domain.</p>
+        <div class="actions">
+          <button type="button" class="primary" id="read">Retrieve the file</button>
+          <button type="button" class="secondary" id="agent-mark">Ask it to mark ready</button>
+        </div>
+      </article>
+    </aside>
   </div>
-  <p id="status"></p>
-  <pre id="evidence">No call yet.</pre>
   <script>
     const LAB = ["http://localhost:9000", "http://127.0.0.1:9000"];
-    const evidence = document.querySelector("#evidence");
-    const status = document.querySelector("#status");
+    const activity = document.querySelector("#activity");
     const who = document.querySelector("#who");
 
-    function show(body) {
+    function text(id, value) {
+      document.querySelector(id).textContent = value;
+    }
+
+    function statusLabel(status) {
+      if (status === "IN_REVIEW") return "In review";
+      if (status === "READY_FOR_QUOTE") return "Ready for quote";
+      return status || "Status unknown";
+    }
+
+    function paintStatus(submission) {
+      const status = submission && submission.status;
+      const label = statusLabel(status);
+      for (const id of ["#queue-status", "#file-status"]) {
+        const node = document.querySelector(id);
+        node.textContent = label;
+        node.classList.toggle("ready", status === "READY_FOR_QUOTE");
+      }
+      const writes = submission && submission.write_handler_calls;
+      text("#writes", writes == null ? "Write handler calls —" : "Write handler calls " + writes);
+    }
+
+    function paintFile(record) {
+      if (!record) return;
+      text("#applicant", record.applicant || "Context not on the file");
+      text("#queue-name", record.applicant || "Account not retrieved");
+      const attributes = record.attributes || {};
+      const controls = document.querySelector("#controls");
+      controls.replaceChildren();
+      const rows = [
+        ["MFA coverage", attributes.mfa_coverage_band],
+        ["Backups", attributes.backup_status],
+      ];
+      for (const [name, value] of rows) {
+        const row = document.createElement("div");
+        row.className = "fact";
+        const dt = document.createElement("dt");
+        const dd = document.createElement("dd");
+        dt.textContent = name;
+        dd.textContent = value || "—";
+        row.append(dt, dd);
+        controls.append(row);
+      }
+      const referral = document.querySelector("#referral");
+      referral.textContent = record.referral_note || "No referral on the file.";
+      referral.classList.remove("empty");
+      paintStatus(record);
+    }
+
+    function clearFile() {
+      text("#applicant", "Context not on the file");
+      text("#queue-name", "Account not retrieved");
+      document.querySelector("#controls").innerHTML = '<p class="empty">The agent has not retrieved them.</p>';
+      const referral = document.querySelector("#referral");
+      referral.textContent = "The agent has not retrieved it.";
+      referral.classList.add("empty");
+      activity.innerHTML = '<p class="empty">No call yet. The agent reads the file. The underwriter marks it ready. The gateway decides each one.</p>';
+      paintAgentIdentity(null);
+    }
+
+    function field(dl, name, value) {
+      const wrap = document.createElement("div");
+      const dt = document.createElement("dt");
+      const dd = document.createElement("dd");
+      dt.textContent = name;
+      dd.textContent = value == null || value === "" ? "—" : String(value);
+      wrap.append(dt, dd);
+      dl.append(wrap);
+    }
+
+    function contextOf(body) {
+      const result = body.mcp && body.mcp.result;
+      return result && result.structuredContent || null;
+    }
+
+    function setPair(id, value) {
+      text(id, value == null || value === "" ? "—" : String(value));
+    }
+
+    function paintUnderwriter(identity) {
+      if (!identity) {
+        text("#uw-role", "Not signed in");
+        text("#uw-mark", "—");
+        text("#uw-sub", "Not signed in");
+        setPair("#uw-iss", null);
+        setPair("#uw-scope", null);
+        setPair("#uw-exp", null);
+        return;
+      }
+      text("#uw-role", "Signed in");
+      text("#uw-mark", "UW");
+      setPair("#uw-sub", identity.sub);
+      setPair("#uw-iss", identity.iss);
+      setPair("#uw-scope", identity.scope);
+      setPair("#uw-exp", identity.expires_in == null ? null : identity.expires_in + "s");
+    }
+
+    function paintAgentIdentity(identity) {
+      if (!identity) {
+        text("#ag-act", "No call yet");
+        text("#ag-sub", "The underwriter, once a call is made");
+        setPair("#ag-iss", null);
+        setPair("#ag-scope", null);
+        setPair("#ag-exp", null);
+        return;
+      }
+      setPair("#ag-act", identity.act_sub);
+      setPair("#ag-sub", identity.sub);
+      setPair("#ag-iss", identity.iss);
+      setPair("#ag-scope", identity.scope);
+      setPair("#ag-exp", identity.expires_in == null ? null : identity.expires_in + "s");
+    }
+
+    function addEvent(body, action) {
       const identity = body.identity || {};
       const submission = body.submission || {};
-      const lines = [
-        body.failed_closed ? "Failed closed before the gateway: " + (body.reason || "") : "Gateway HTTP " + (body.http_status ?? ""),
-        "Source: " + (body.source || ""),
-        "iss: " + (identity.iss || ""),
-        "sub: " + (identity.sub || ""),
-        "act.sub: " + (identity.act_sub || ""),
-        "scope: " + (identity.scope || ""),
-        "expires in seconds: " + (identity.expires_in ?? ""),
-        "lifetime seconds: " + (identity.lifetime_seconds ?? ""),
-        "correlation: " + (body.correlation_id || ""),
-        "status: " + (submission.status || ""),
-        "write handler calls: " + (submission.write_handler_calls ?? ""),
-      ];
-      if (body.mcp && body.mcp.error) lines.push("MCP error: " + (body.mcp.error.message || body.mcp.error.code));
-      evidence.textContent = lines.join("\n");
-      status.textContent = body.ok ? "Allowed." : (body.failed_closed ? "Stopped." : "Denied or incomplete.");
-      if (body.correlation_id && body.decisions_url) openDecisions(body.decisions_url);
+      const failed = body.failed_closed;
+      const allowed = body.ok && !failed;
+      const article = document.createElement("article");
+      article.className = "event " + (failed ? "stopped" : allowed ? "allowed" : "denied");
+      const header = document.createElement("header");
+      const who = document.createElement("strong");
+      who.textContent = body.source === "human" ? "Underwriter" : "Cyber review agent";
+      const tool = document.createElement("span");
+      tool.textContent = action.tool;
+      const outcome = document.createElement("span");
+      outcome.className = "outcome";
+      outcome.textContent = failed ? "Stopped" : allowed ? "Allowed" : "Refused";
+      header.append(who, tool, outcome);
+      const dl = document.createElement("dl");
+      dl.className = "grid";
+      const error = body.mcp && body.mcp.error;
+      field(dl, "HTTP", failed ? "not called" : body.http_status);
+      field(dl, "Correlation", body.correlation_id);
+      field(dl, "iss", identity.iss);
+      field(dl, "sub", identity.sub);
+      field(dl, "act.sub", identity.act_sub);
+      field(dl, "scope", identity.scope);
+      field(dl, "Expires in", identity.expires_in);
+      field(dl, "Lifetime", identity.lifetime_seconds);
+      field(dl, "Status", submission.status);
+      field(dl, "Write handler", submission.write_handler_calls);
+      if (failed && body.reason) field(dl, "Reason", body.reason);
+      if (error) field(dl, "MCP error", error.message || error.code);
+      article.append(header);
+      if (failed && !body.identity) {
+        const reason = document.createElement("p");
+        reason.textContent = body.reason || "Stopped before the gateway.";
+        article.append(reason);
+      } else {
+        article.append(dl);
+      }
+      const empty = activity.querySelector(".empty");
+      if (empty) empty.remove();
+      activity.prepend(article);
+      if (!body.identity) return;
+      if (body.source === "human") paintUnderwriter(identity);
+      else paintAgentIdentity(identity);
     }
 
     function openDecisions(url) {
@@ -61,29 +499,54 @@
       }
     }
 
-    async function post(path) {
+    function show(body, action) {
+      if (action && !body.source) body.source = action.actor === "human" ? "human" : "agent";
+      if (body.submission) paintStatus(body.submission);
+      const record = contextOf(body);
+      if (record) paintFile(record);
+      if (action) addEvent(body, action);
+      if (body.correlation_id && body.decisions_url) openDecisions(body.decisions_url);
+    }
+
+    async function post(path, action) {
       const response = await fetch(path, {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
-      show(await response.json());
+      let body = {};
+      try { body = await response.json(); } catch (error) { body = {ok: false, failed_closed: true, reason: "The desk could not read the response"}; }
+      if (response.status === 401) body = {ok: false, failed_closed: true, source: action.actor, reason: body.reason || "Sign in first"};
+      show(body, action);
     }
 
     async function refresh() {
-      const body = await (await fetch("/api/session")).json();
+      const body = await (await fetch("/api/desk")).json();
+      paintStatus(body.submission);
       if (!body.signed_in) {
-        who.textContent = "Not signed in.";
+        who.textContent = "No underwriter on this file.";
+        paintUnderwriter(null);
         return;
       }
       const identity = body.identity || {};
-      who.textContent = "Signed in. sub " + identity.sub + ". Token lifetime " + (identity.lifetime_seconds ?? "") + " seconds, " + identity.expires_in + " seconds left.";
+      who.textContent = "Signed in · sub " + (identity.sub || "");
+      paintUnderwriter(identity);
     }
+
+    const readAction = {tool: "get_submission_context", actor: "agent"};
+    const agentMark = {tool: "mark_ready_for_quote", actor: "agent"};
+    const humanMark = {tool: "mark_ready_for_quote", actor: "human"};
 
     document.querySelector("#sign-in").onclick = async () => {
       const body = await (await fetch("/api/sign-in/start", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"})).json();
       window.open(body.authorize_url, "specialty-underwriting-sign-in", "popup,width=480,height=720");
     };
-    document.querySelector("#read").onclick = () => post("/api/read-through-agent");
-    document.querySelector("#agent-mark").onclick = () => post("/api/mark-through-agent");
-    document.querySelector("#human-mark").onclick = () => post("/api/mark-myself");
-    document.querySelector("#reset").onclick = () => post("/api/reset");
+    document.querySelector("#read").onclick = () => post("/api/read-through-agent", readAction);
+    document.querySelector("#agent-mark").onclick = () => post("/api/mark-through-agent", agentMark);
+    document.querySelector("#human-mark").onclick = () => post("/api/mark-myself", humanMark);
+    document.querySelector("#reset").onclick = async () => {
+      const response = await fetch("/api/reset", {method: "POST", headers: {"Content-Type": "application/json"}, body: "{}"});
+      const body = await response.json();
+      clearFile();
+      paintStatus(body.submission);
+      refresh();
+    };
     addEventListener("message", (event) => {
       if (event.origin === location.origin && event.data && event.data.type === "specialty-underwriting:signed-in") refresh();
       if (event.source === parent && LAB.includes(event.origin) && event.data && event.data.type === "gravitee-lab:action") {

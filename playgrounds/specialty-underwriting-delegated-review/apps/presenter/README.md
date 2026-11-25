@@ -1,8 +1,8 @@
-# Review page
+# Underwriting desk
 
 ## What it is
 
-The page an underwriter uses. The browser talks only to this process. Delegated actions go to the agent. **Mark ready myself** calls the same gateway tool with the underwriter token.
+The desk an underwriter uses. The cyber review agent sits on the same file. The browser talks only to this process. Delegated actions go to the agent. **Mark ready myself** calls the same gateway tool with the underwriter token.
 
 ## Endpoints
 
@@ -11,6 +11,7 @@ The page an underwriter uses. The browser talks only to this process. Delegated 
 | GET | `/` | The page |
 | GET | `/health` | Ready |
 | GET | `/api/ready` | Agent and submission service health |
+| GET | `/api/desk` | Session and file status. Risk facts are not included |
 | POST | `/api/sign-in/start` | Authorization URL for the popup |
 | GET | `/callback` | Completes the code exchange |
 | POST | `/api/read-through-agent` | Delegated read |

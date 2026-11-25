@@ -93,6 +93,14 @@ class RouteTest(unittest.TestCase):
         Upstream.calls = []
         server.SESSIONS.clear()
 
+    def test_desk_reports_file_status_without_a_tool_call(self):
+        with urllib.request.urlopen(self.base + "/api/desk") as response:
+            body = json.loads(response.read().decode())
+        self.assertEqual(body["submission"]["status"], "IN_REVIEW")
+        self.assertEqual(body["submission"]["submission_id"], "CYB-001")
+        self.assertFalse(body["signed_in"])
+        self.assertFalse(Upstream.calls)
+
     def test_cross_site_post_is_refused(self):
         status, _ = post(self.base, "/api/reset", {"Origin": "http://evil.example"})
         self.assertEqual(status, 403)

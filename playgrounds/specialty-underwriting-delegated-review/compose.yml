@@ -114,7 +114,7 @@ services:
       io.gravitee.name: Review page
       io.gravitee.description: Underwriter review of one synthetic cyber submission
       io.gravitee.group: API Management
-      io.gravitee.console.specialty-underwriting-delegated-review-presenter.name: Review page
+      io.gravitee.console.specialty-underwriting-delegated-review-presenter.name: Underwriting desk
       io.gravitee.console.specialty-underwriting-delegated-review-presenter.url: http://localhost:8170
     healthcheck:
       <<: *healthcheck

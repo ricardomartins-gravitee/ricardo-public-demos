@@ -4,7 +4,7 @@ A signed-in underwriter asks a hosted agent to read one synthetic cyber submissi
 
 The record is fixture data. Marking it ready does not quote, bind, or issue coverage. The issuer of every token is this lab's Access Management domain. Nothing here is a customer submission.
 
-Sign in as [Casey Hale](account:casey.hale@specialty-underwriting.test). The review page is http://localhost:8170. Gamma is http://localhost:8086. Access Management is http://localhost:8081, in its own window.
+Sign in as [Casey Hale](account:casey.hale@specialty-underwriting.test). The underwriting desk is http://localhost:8170. The cyber review agent sits on the file with the underwriter. Gamma is http://localhost:8086. Access Management is http://localhost:8081, in its own window.
 
 Before the clock, open http://localhost:8170/api/ready and confirm it says the agent and the submission service are up. Leave the submission at `IN_REVIEW`.
 
@@ -24,7 +24,7 @@ sequenceDiagram
 
 ## 1. Read the submission through the agent
 
-On the review page, [sign in](action:sign-in), then [read the context through the agent](action:read-through-agent).
+On the desk, [sign in](action:sign-in), then [read the context through the agent](action:read-through-agent). The agent is the colleague on the file. The underwriter is the other.
 
 The page shows `CYB-001`, line `CYBER`, status `IN_REVIEW`, and the exchange it actually received: `iss`, the underwriter's `sub`, and `act.sub` of `cyber-review-agent`. Those two subjects are different. The write handler count stays 0.
 
@@ -54,7 +54,7 @@ The page also sends that Gamma address to the Lab UI when a call carries a corre
 
 ## Start again
 
-On the review page, [reset the demo](action:reset-demo). The submission returns to `IN_REVIEW` and the write count returns to 0. Sign in again: the access token lasts 10 minutes, and reset drops the page session.
+On the desk, [reset the demo](action:reset-demo). The submission returns to `IN_REVIEW` and the write count returns to 0. Sign in again: the access token lasts 10 minutes, and reset drops the page session.
 
 Re-seed puts the domain, the agent, the proxy, and both policies back as the files say. It does not clear platform logs, and it does not remove a Gamma link that already points at another working domain.
 

@@ -10,7 +10,7 @@ No model, Ollama, or external issuer. Every token is from the domain `specialty-
 
 ## Start
 
-Start it from its page in the Lab UI. The first start builds three images and seeds the domain, the agent, the proxy, and the policies. The review page is http://localhost:8170. Gamma is http://localhost:8086. Access Management is http://localhost:8081.
+Start it from its page in the Lab UI. The first start builds three images and seeds the domain, the agent, the proxy, and the policies. The underwriting desk is http://localhost:8170. The cyber review agent is on the file with the underwriter. Gamma is http://localhost:8086. Access Management is http://localhost:8081.
 
 `/api/ready` answers when the agent and the submission service are up.
 
