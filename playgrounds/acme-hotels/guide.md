@@ -24,8 +24,8 @@ flowchart TB
 The hexagons are the Gravitee *gateway*. It has a *proxy* for each kind of traffic:
 
 - the *A2A* (agent to agent) proxy carries the guest's messages to the concierge, the concierge's question to the booking desk, and the concierge's question to the loyalty desk
-- the *LLM* (large language model) proxy carries each agent's calls to the model, including the loyalty desk's. The guard rails, the cache, the token limit and the PII filter apply to every agent's model call. A tool call is not cached, and a booking list is not cached. The PII filter leaves a turn that already holds a tool result unchanged. The agents call `gemma4:12b`. A failed call is tried once more, on `qwen3:1.7b`. A slow answer stays on Gemma: loading the model is not a failure
-- the hotels' *MCP* (model context protocol) server turns the hotels' REST API into tools. The booking desk receives those tools, including `listBookings`. The concierge receives one MCP server, with which it asks the other two agents (`ask_booking_desk`, `ask_loyalty_desk`). That server also publishes the prompts and the stay policy
+- the *LLM* (large language model) proxy carries each agent's calls to the model, including the loyalty desk's. The guard rails, the cache, the token limit and the PII filter apply to every agent's model call. A tool call is not cached, and a booking list is not cached. The PII filter leaves a turn that already holds a tool result unchanged. The agents call `gemma4:12b` with thinking off, and each call asks Ollama to keep that model loaded for 30 minutes. A failed call is tried once more, on `qwen3:1.7b`. A slow answer stays on Gemma: loading the model is not a failure
+- the hotels' *MCP* (model context protocol) server on the gateway turns the hotels' REST API into tools. The booking desk calls them. A booking goes through **ACME Hotels API**, where lesson 4's plans run. The concierge calls the desk's own MCP server (`ask_booking_desk`, `ask_loyalty_desk`), and that server also publishes the prompts and the stay policy. Lesson 5 shows the catalog copy of both servers, and the studio that publishes a selection of their tools on its own address
 - the hotels' REST API sits behind the gateway too, which lets only the right calls through
 
 *Access Management*, Gravitee's identity service, signs guests in. *Authorization Management* says which bookings each guest may see.
@@ -124,13 +124,24 @@ sequenceDiagram
   Authz-->>API: the answers<br/>of the policy
 ```
 
-- The concierge forwards John's token and has no Access Management client, so it cannot exchange one. The booking desk exchanges that token once, at Access Management. This is the token exchange of RFC 8693. The new token names John, and the *actor* is the booking desk. The domain allows that one delegation and refuses a second.
-- The gateway accepts the call only when the actor is the booking desk and the token names the guest. It then asks Authorization Management whether John may see each booking.
+- The concierge, the booking desk and the loyalty desk are hosted delegated agents. The concierge forwards John's token and does not exchange one. The booking desk exchanges it once, at Access Management. This is the token exchange of RFC 8693. The new token names John, and the *actor* is the booking desk. The loyalty desk does the same exchange when an offer is for a booking. The domain allows that one delegation and refuses a second. The hotels API accepts only those two desks as the actor.
+- The gateway accepts the call only when the actor is the booking desk or the loyalty desk, and the token names the guest. It then asks Authorization Management whether John may see each booking. A booking read by its id uses the same check. Without a token the gateway refuses it. With a token, a booking the guest does not own is refused too. A hotel search stays open.
 - The API returns 3 bookings and John sees 2. The policy allows a booking when John owns it. He owns two, and the third belongs to a hotel he is not a guest of.
-- [AM Console](http://localhost:8081), with `admin` / `adminadmin`, shows the domain `acme-hotels`: its applications, John, the booking MCP server and its tools.
-- In the **APIM Console** tab, open the API **ACME Hotels API**, then its plans. The plan **AI Agent** only accepts the token the booking desk exchanged.
-- In the **Gamma Console** tab, open **Authorization Management**. The policy **A guest views a booking they own** allows a booking when its id is one John owns. **Entities** lists John, the three bookings and the hotels. John owns `BK-0001` and `BK-0002`. `BK-0005` belongs to Imperial Tokyo, and he is not a guest there.
-- [Decisions](http://localhost:8086/environments/default/authz/observe/logs) lists each check the gateway made.
+
+### Show
+
+Run the two sends in **Try** first. When someone asks where that token work happens, open the screens below in this order. Two lists use the word *agent*. **Catalog**, **Agents** is the card of a running agent: its name, its address and its skills. **Agent Identity** is the OAuth client that agent presents. This release does not show the client on the card.
+
+- The website is the result. Unsigned, the answer is access denied. Signed in as John, the answer is 2 bookings of 3. **Sign In** uses the browser application **ACME Hotels website**.
+- The **AI Agent Inspector**, on the left of the website, shows the handoff. The concierge calls the booking desk, and the desk calls `listBookings`. The concierge forwarded John's token. The exchange is the desk's call to Access Management.
+- In the **Gamma Console** tab, open **Agent Identity**. The page follows the Access Management domain `acme-hotels`. The counters read **Hosted delegated** 3, **User-embedded** 0 and **Autonomous** 0. **New agent** offers three personas. **Desktop Productivity Agent** is a public client: the person is present, the client has no secret, and PKCE is required. **Hosted Agent** is a confidential client a server runs for a signed-in person. **Workload Agent** acts on its own, with no browser. This playground registers the three hosted agents.
+- Open **Concierge**. **Overview** shows persona **Hosted Agent**, OAuth client **Confidential**, and client id `acme-hotels-concierge`. **Identity Provider** is **Default Identity Provider**, the store the domain signs guests in with. **Credentials** is empty: that page is a key set or a SPIFFE id, and a hosted agent signs in with the client secret Access Management holds. **Booking desk** and **Loyalty desk** show the same persona. Their client ids are `acme-hotels-booking-desk` and `acme-hotels-loyalty-desk`.
+- [AM Console](http://localhost:8081), with `admin` / `adminadmin`, domain `acme-hotels`. **Agents** lists the same three. Each row says **HOSTED_DELEGATED**, which is the Access Management name of **Hosted Agent**. Open **Booking desk**, then **Settings**, **Agent Identity**: the type was chosen when the agent was created, and the grants live under **OAuth 2.0 / OIDC**.
+- On **Grant Flows**, **Client Credentials** and **Token Exchange** are on, and **Inherit configuration** is on, so the exchange follows the domain. **Type** is `client_secret_basic`. On **Tokens & User Profile**, under **Custom claims**, the access token carries `email`, the guest's username. **Loyalty desk** has the same grants and uses them. **Concierge** has the same kind. Its process forwards the guest's token and does not call the token endpoint.
+- Open **Settings**, then **Token Exchange**. Token exchange is on. **Allow Impersonation** is off, so a client cannot become the guest. **Allow Delegation** is on and **Maximum Delegation Depth** is 1, so a desk may act on behalf of the guest once. Scope handling is **Downscoping**. **Applications** lists **ACME Hotels website**, client id `acme-hotels`. That is the browser, and it is not an agent.
+- In the **APIM Console** tab, open **ACME Hotels API**, then **Plans**. On the plan **Public**, the flow **Bookings require a guest** refuses a booking that arrived with no token. On the plan **AI Agent**, the flow **Bookings Management** accepts the call when the actor is the booking desk or the loyalty desk and the token names the guest. A token the concierge exchanged would be refused here. Hotel search stays on neither flow.
+- In the **Gamma Console** tab, open **Authorization Management**. The policy **A guest views a booking they own** allows a booking John owns. **Entities** lists John, `BK-0001`, `BK-0002` and `BK-0005`. [Decisions](http://localhost:8086/environments/default/authz/observe/logs) is the check the gateway just made: John may see the first two, and Imperial Tokyo's `BK-0005` is refused.
+- Lesson 8 uses the same screens. A signed-in loyalty offer is the loyalty desk exchanging John's token, then the same **AI Agent** plan and the same policy.
 
 ## 5. Look at the agent's tools
 
@@ -146,9 +157,16 @@ The agent finds its tools by asking an MCP server. Ask the same server yourself.
 
 ### Look
 
-- These are the tools the booking desk uses, including `listBookings`. The concierge is not given them. It asks the desk, and the guest's token goes with that call.
+- These are the tools the booking desk uses, including `listBookings`. The concierge asks the desk instead, and the guest's token goes with that call.
 - [The API's documentation](http://localhost:8131/docs) lists the same operations as REST.
-- In the **APIM Console** tab, open the API **ACME Hotels API MCP Server**, then its entrypoints. The MCP entrypoint lists the tools.
+- In the **APIM Console** tab, open the API **ACME Hotels API MCP Server**, then its entrypoints. The MCP entrypoint is where this tool list is written. Its address is `http://localhost:8082/hotels-mcp/mcp`. The booking desk calls `searchHotels` here. A booking uses `http://localhost:8082/hotels/mcp` on **ACME Hotels API**, which is the plan from lesson 4.
+
+The same names then show up twice more. Each copy has its own job.
+
+- In the **Gamma Console** tab, open **Catalog**, **MCP Servers**. Gravitee connected to the live servers and stored what they answered. **ACME Hotels API MCP Server** is the hotels' list, read from `/hotels-mcp/mcp`. **ACME Hotels Booking Desk** is the concierge's list, read from the desk process: `ask_booking_desk`, `ask_loyalty_desk`, the prompts and the two resources. The running agents call those servers. They do not call this catalog page.
+- Open **Secure**, **MCP Proxies**. **ACME Hotels Desk** is mode **Studio**, at `/acme-hotels-plus/desk`. A studio picks tools that are already in the catalog and publishes them as one gateway address, on the plan **Open**. This one picks `searchHotels`, `getHotelById`, `getHotelReviews`, `ask_booking_desk` and `ask_loyalty_desk`. The prompts and the resources stay on the booking-desk server. A caller of `/acme-hotels-plus/desk` is who this row governs. The chat uses the original servers.
+
+Change the entrypoint, and the booking desk and the loyalty desk follow it. The catalog keeps the previous list until the next seed, which reads the servers again. Change the catalog, and the studio can pick the new names. Change **ACME Hotels Desk**, and callers of `/acme-hotels-plus/desk` follow it.
 
 ## 6. Ask the booking desk
 
@@ -160,9 +178,9 @@ The concierge does not search hotels itself. It calls `ask_booking_desk`, and th
 
 ### Look
 
-- The inspector shows two agents. The concierge calls `ask_booking_desk`. The booking desk then calls `searchHotels`.
+- The inspector shows two agents, each with its own icon. The concierge calls `ask_booking_desk`. The booking desk then calls `searchHotels`. The chat uses the same icons: a reply the booking desk produced wears the booking desk, and a loyalty offer wears the loyalty desk.
 - In the **APIM Console** tab, open **Booking Desk Agent**. The message is a call on that proxy, at `/booking-desk/`.
-- In the **Gamma Console** tab, open **Agent Management**. **Agents** lists **ACME Hotels Concierge**, **ACME Hotels Booking Desk** and **ACME Hotels Loyalty Desk**. **MCP servers** lists the hotels' tools, and on the booking desk the tools, the prompts and the resources.
+- In the **Gamma Console** tab, open **Agent Management**. **Agents** lists **ACME Hotels Concierge**, **ACME Hotels Booking Desk** and **ACME Hotels Loyalty Desk**. Each row is the agent's card. The OAuth client is **Agent Identity**, and the same three clients are **Agents** in the AM console, both in lesson 4. **MCP Servers** lists the copy of the desk's tools. The concierge calls the desk process for `ask_booking_desk`, and the desk process sends the question through **Booking Desk Agent**.
 
 ## 7. Walk the Agent Management catalog
 
@@ -176,23 +194,26 @@ In the **Gamma Console** tab, open **Agent Management** and these sections:
 - **Models**: the three local models. The agents call **ACME Hotels Gemma 4 12B**. A failed call is retried on **ACME Hotels Qwen3 1.7B**. Gemini 3.5 Flash, Gemini 3.1 Flash Lite, GPT-5.4 mini and Claude Sonnet 5 appear when their keys are set.
 - **Knowledge**: the stay policy and the guest privacy note. Both are simulated.
 - **Skills**: how the concierge hands a search to the desk.
-- **MCP servers**: **ACME Hotels API MCP Server** lists the hotels' tools. **ACME Hotels Booking Desk** lists `ask_booking_desk`, `ask_loyalty_desk`, the prompts `search-hotels` and `loyalty-offer`, and the resources **Stay policy** and **Guest privacy**.
-- **MCP studios**: **ACME Hotels Desk**, one server that offers hotel search, `ask_booking_desk` and `ask_loyalty_desk`. Its path is `/acme-hotels-plus/desk`.
+- **MCP Servers**: the stored copy from lesson 5. **ACME Hotels API MCP Server** is the hotels' tools. **ACME Hotels Booking Desk** is `ask_booking_desk`, `ask_loyalty_desk`, the prompts `search-hotels` and `loyalty-offer`, and the resources **Stay policy** and **Guest privacy**.
+- **Secure**, **MCP Proxies**: **ACME Hotels Desk**, mode **Studio**, path `/acme-hotels-plus/desk`. It publishes five of those tools on the plan **Open**. The chat calls the original servers. This row governs a caller of its own path.
 - **Workspaces**: **ACME Hotels Desk** serves `gemma4:12b` (alias `desk`), `qwen3:1.7b` and `qwen3:0.6b`, with a budget of $5 a day for the front desk. The agents do not call this workspace.
 - **Dashboards**: **🏨 ACME Hotels agents**, requests and cost of the LLM, MCP and A2A calls.
+- **Agent Identity**: the OAuth clients of lesson 4. **Concierge**, **Booking desk** and **Loyalty desk** are **Hosted Agent**. The same three are **Agents** in the AM console, domain `acme-hotels`, each **HOSTED_DELEGATED**. The cards under **Catalog**, **Agents** show the address and the skills. The client is this page.
 
 ## 8. Ask the loyalty desk in AWS
 
-The loyalty desk is registered in the local AWS account as a Bedrock AgentCore runtime. Gravitee calls the desk, and the desk calls back through the same gateway for the model and the hotel tools.
+The loyalty desk is registered in the local AWS account as a Bedrock AgentCore runtime. Gravitee calls the desk, and the desk calls back through the same gateway for the model and, when the guest is signed in, for that guest's bookings. An offer on a booking needs the guest's token. A guest who is not signed in gets the loyalty program.
 
 ### Try
 
-- Send **Ask the loyalty desk what offer John gets for his Paris stay.**
+- Sign out, if you are signed in. Send **Ask the loyalty desk what offer John gets for his Paris stay.**
+- The answer is the program: points and late checkout, and it asks you to sign in. It does not name a booking.
+- Click **Sign In** and sign in as `john.doe@gravitee.io`. Send the same sentence again.
 - Wait for the answer. The model sometimes picks another tool: send the same sentence again, with those words.
 
 ### Look
 
-- The answer is one offer: points and late checkout, for a hotel the tool returned.
+- The signed-in answer is one offer on a booking John may see: points and late checkout, with the booking and the hotel. The loyalty desk exchanged his token, and the gateway kept the list to those bookings.
 - In the **APIM Console** tab, open **Loyalty Desk Agent**. The message is a call on that proxy, at `/loyalty-desk/`.
 - Open **ACME Hotels LLMs** and **ACME Hotels API MCP Server**. The runtime's model call and its `searchHotels` call are there.
 - In the **Gamma Console** tab, open **Agent Management**. **Agents** lists **ACME Hotels Loyalty Desk** beside the concierge and the booking desk. Its card says it runs in AWS. The address a caller uses is the gateway.
@@ -201,7 +222,7 @@ The loyalty desk is registered in the local AWS account as a Bedrock AgentCore r
 ## If something does not work
 
 - **The concierge does not answer.**
-  It reasons with `gemma4:12b`, on your machine, through Ollama. Is Ollama running? `ollama list` must show `gemma4:12b` and `qwen3:1.7b`. The first answer takes longer while Gemma loads. If Gemma cannot answer, the proxy tries `qwen3:1.7b` once. A search also waits for the booking desk.
+  It reasons with `gemma4:12b`, on your machine, through Ollama. Is Ollama running? `ollama list` must show `gemma4:12b` and `qwen3:1.7b`. The first answer takes longer while Gemma loads. After that, Ollama keeps it for 30 minutes, and the calls do not wait for a reasoning trace. If Gemma cannot answer, the proxy tries `qwen3:1.7b` once. A search also waits for the booking desk.
 - **Lesson 8 does not reach the loyalty desk.**
   Send **Ask the loyalty desk what offer John gets for his Paris stay.** again.
 - **A `429` in lesson 1.**

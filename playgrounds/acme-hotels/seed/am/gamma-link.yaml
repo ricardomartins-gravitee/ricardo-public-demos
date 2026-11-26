@@ -1,0 +1,4 @@
+# Agent Identity lists the agents of this domain. Gamma keeps one link to Access Management for the
+# whole environment. The seed points that link here once it already aims at this domain.
+domain: acme-hotels
+serviceAccount: gamma-service-account

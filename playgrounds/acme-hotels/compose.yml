@@ -1,7 +1,7 @@
 # Demo secrets shared by every container that needs them. Change one in the shell or in this playground's .env.
 x-acme-hotels-plus-secrets:
   demo-password: &demo-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_DEMO_PASSWORD:-HelloWorld@123} # Password of John Doe
-  agent-client-secret: &agent-client-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET:-hotel-ai-agent} # Secret of the booking desk's application in Access Management
+  agent-client-secret: &agent-client-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET:-hotel-ai-agent} # Secret of the concierge, the booking desk and the loyalty desk in Access Management
   mcp-resource-secret: &mcp-resource-secret ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_MCP_RESOURCE_SECRET:-hotel-mcp} # Secret of the booking MCP server's resource in Access Management; letters, digits and dashes only
   apim-password: &apim-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_APIM_PASSWORD:-admin} # Password of user admin in API Management
   am-password: &am-password ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AM_PASSWORD:-adminadmin} # Password of user admin in Access Management
@@ -162,7 +162,7 @@ services:
       LLM_TEMPERATURE: "0.3"
       MCP_HTTP_URLS: http://apim-gateway:8082/hotels/mcp # The hotels' tools, behind the gateway
       AM_TOKEN_URL: http://am-gateway:8092/acme-hotels/oauth/token # Token endpoint of the Access Management domain
-      AM_CLIENT_ID: acme-hotels-booking-desk # Its application. It alone exchanges the guest's token
+      AM_CLIENT_ID: acme-hotels-booking-desk # Its application. It exchanges the guest's token when it lists bookings
       AM_CLIENT_SECRET: *agent-client-secret # RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET
     labels:
       io.gravitee.name: Booking desk
@@ -208,6 +208,7 @@ services:
     volumes:
       - ./apps/website/entrypoint.sh:/acme-hotels-plus-web-entrypoint.sh:ro # Replaces the chat samples with the guide's sentences
       - ./apps/website/suggestions.html:/acme-hotels-plus-suggestions.html:ro # The samples the chat offers
+      - ./apps/website/agents.js:/usr/share/nginx/html/acme-hotels-plus-agents.js:ro # Icons for the concierge, the booking desk and the loyalty desk
     labels:
       io.gravitee.name: ACME Hotels website
       io.gravitee.description: The hotels' website, where guests chat with the agent
@@ -255,6 +256,10 @@ services:
       LLM_BASE_URL: http://apim-gateway:8082/llm-proxy # The LLM proxy, as the runtime reaches it
       LLM_MODEL: ollama:gemma4:12b # Provider and model on the LLM proxy
       MCP_URL: http://apim-gateway:8082/hotels-mcp/mcp # The hotels' tools, as the runtime reaches them
+      HOTELS_MCP_URL: http://apim-gateway:8082/hotels/mcp # The hotels' tools behind the plan that checks a booking
+      AM_TOKEN_URL: http://am-gateway:8092/acme-hotels/oauth/token # Token endpoint of the Access Management domain
+      AM_CLIENT_ID: acme-hotels-loyalty-desk # Its application. It exchanges the guest's token when an offer is for a booking
+      AM_CLIENT_SECRET: *agent-client-secret # RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_AGENT_CLIENT_SECRET
       LOYALTY_LLM_TIMEOUT: "60" # Seconds the loyalty desk waits for the LLM proxy
     labels:
       io.gravitee.name: Loyalty desk
@@ -271,6 +276,7 @@ services:
     pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
     container_name: gio-acme-hotels-plus-seed
     restart: "no"
+    entrypoint: ["/bin/sh", "/acme-hotels-plus-before-seed.sh"] # Removes a desk that is still a service application, then seeds
     depends_on:
       apim-management-api:
         condition: service_healthy
@@ -285,6 +291,7 @@ services:
     volumes:
       - ./seed:/seed:ro
       - ./.state:/state # What the seed created, to remove it later
+      - ./apps/seed/before-seed.sh:/acme-hotels-plus-before-seed.sh:ro # The desks must be agents, and Agent Identity lists this domain
     environment:
       APIM_MANAGEMENT_URL: http://apim-management-api:8083
       APIM_USERNAME: admin
@@ -297,6 +304,7 @@ services:
       GATEWAY_READY_TIMEOUT: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_GATEWAY_READY_TIMEOUT:-300} # Seconds the seed waits for the gateway to serve each API (the first start downloads the AI models)
       SEED_WAIT_GATEWAY: "1" # Discover the MCP servers only after the gateway serves every API
       AM_GATEWAY_URL: http://am-gateway:8092 # Access Management, as the gateway reaches it
+      AM_PUBLIC_URL: http://localhost:8092 # Access Management, as your browser reaches it. Agent Identity shows this
       HOTELS_BACKEND_URL: http://acme-hotels-plus-backend:8000 # The hotels' REST API
       HOTELS_AGENT_URL: http://acme-hotels-plus-agent:8001 # The concierge
       BOOKING_AGENT_URL: http://acme-hotels-plus-booking:8001 # The booking desk, behind its A2A proxy
@@ -322,6 +330,12 @@ services:
       io.gravitee.role: seed
     networks:
       - internal
+
+  agent-inspector:
+    command: ["sh", "/acme-hotels-plus-inspector.sh"] # Names each agent on the diagram. The image's entrypoint runs this
+    volumes:
+      - ./apps/inspector/start.sh:/acme-hotels-plus-inspector.sh:ro
+      - ./apps/inspector/agents.js:/acme-hotels-plus-agents.js:ro # Icons for the concierge, the booking desk and the loyalty desk
 
   apim-gateway:
     extra_hosts:

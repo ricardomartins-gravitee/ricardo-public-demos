@@ -12,6 +12,14 @@ class SubjectToken(unittest.TestCase):
     def test_the_scheme_is_case_insensitive(self):
         self.assertEqual(forward.subject_token("bearer guest-token"), "guest-token")
 
+    def test_a_desk_tool_names_that_desk(self):
+        self.assertEqual(forward.speaker_of("ask_booking_desk"), "booking")
+        self.assertEqual(forward.speaker_of("ask_loyalty_desk"), "loyalty")
+        self.assertEqual(forward.speaker_of(None), "concierge")
+
+    def test_a_reply_starts_with_the_speaker_the_website_reads(self):
+        self.assertTrue(forward.mark("booking", "Le Chateau").startswith("[[acme-agent:booking]]\n"))
+
     def test_a_missing_or_other_header_is_none(self):
         self.assertIsNone(forward.subject_token(None))
         self.assertIsNone(forward.subject_token(""))

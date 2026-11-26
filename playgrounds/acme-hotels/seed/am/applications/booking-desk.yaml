@@ -1,25 +1,18 @@
-# The booking desk exchanges the guest's token when it calls the hotels API. The concierge has no client.
+# A hosted delegated agent: the kind Access Management lists under Agents, and the kind that exchanges a
+# token for the signed-in guest. The kind gives it client credentials and token exchange. The concierge
+# is the same kind and forwards the guest's token instead of exchanging one.
 name: Booking desk
 description: The booking desk, which acts for the guest when it lists bookings
-type: SERVICE
+type: AGENT
+kind: HOSTED_DELEGATED
 
 clientId: acme-hotels-booking-desk
 clientSecret: "${AGENT_CLIENT_SECRET}"
 
+redirectUris:
+  - "${HOTELS_WEB_URL}/" # The website. The desk does not send the guest there; this kind requires a redirect
+
 oauth:
-  grantTypes:
-    - urn:ietf:params:oauth:grant-type:token-exchange
-    - client_credentials
-  tokenEndpointAuthMethod: client_secret_basic
-  pkce: false
-  tokenExchange:
-    inherited: true
-    scopeHandling: downscoping
-  # The exchange runs before the model answers, and a cold model can take a few minutes
-  tokenValidity:
-    accessToken: 900
-    refreshToken: 14400
-    idToken: 900
   tokenCustomClaims:
     - tokenType: access_token
       claimName: email

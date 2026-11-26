@@ -6,17 +6,22 @@ Gravitee LLM proxy to phrase the offer. Both addresses are the gateway, so Gravi
 call and the tool call.
 """
 
+import base64
 import json
 import os
 import re
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 PORT = int(os.environ.get("LOYALTY_PORT", "8080"))
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL", "http://apim-gateway:8082/llm-proxy")
 LLM_MODEL = os.environ.get("LLM_MODEL", "ollama:gemma4:12b")
-MCP_URL = os.environ.get("MCP_URL", "http://apim-gateway:8082/hotels-mcp/mcp")
+HOTELS_MCP_URL = os.environ.get("HOTELS_MCP_URL", "http://apim-gateway:8082/hotels/mcp")
+AM_TOKEN_URL = os.environ.get("AM_TOKEN_URL", "http://am-gateway:8092/acme-hotels/oauth/token")
+AM_CLIENT_ID = os.environ.get("AM_CLIENT_ID", "acme-hotels-loyalty-desk")
+AM_CLIENT_SECRET = os.environ.get("AM_CLIENT_SECRET", "")
 MCP_TIMEOUT = int(os.environ.get("LOYALTY_MCP_TIMEOUT", "5"))
 LLM_TIMEOUT = int(os.environ.get("LOYALTY_LLM_TIMEOUT", "60"))
 PROTOCOL = "2025-11-25"
@@ -35,7 +40,7 @@ CARD = {
     "skills": [{
         "id": "loyalty-offer",
         "name": "Loyalty offer",
-        "description": "Offers points and late checkout for a hotel the guest names.",
+        "description": "Offers the loyalty program, and points on a booking when the guest is signed in.",
         "tags": ["hotel", "loyalty"],
     }],
     "defaultInputModes": ["text/plain"],
@@ -82,33 +87,62 @@ def parse_json(text):
         return None
 
 
-def first_hotel(data):
-    """The first hotel object in a tool result, in the shapes the hotels API uses."""
+GENERIC = (
+    "500 to 1000 loyalty points on a stay and late checkout at 14:00. "
+    "Sign in to see the offer on your booking."
+)
+
+
+def bearer(authorization):
+    """The access token of a Bearer header, or nothing."""
+    if not authorization:
+        return ""
+    scheme, _, token = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not token.strip():
+        return ""
+    return token.strip()
+
+
+def bookings_of(raw):
+    """Booking objects in a tool result."""
+    data = parse_json(raw)
     if isinstance(data, list):
-        return data[0] if data and isinstance(data[0], dict) else None
+        return [item for item in data if isinstance(item, dict)]
     if not isinstance(data, dict):
-        return None
-    for key in ("hotels", "items", "results", "data"):
+        return []
+    for key in ("bookings", "items", "results", "data"):
         found = data.get(key)
-        if isinstance(found, list) and found and isinstance(found[0], dict):
-            return found[0]
-    if data.get("name"):
-        return data
+        if isinstance(found, list):
+            return [item for item in found if isinstance(item, dict)]
+    return []
+
+
+def booking_for(bookings, city):
+    """The stay the offer is for: one in the named city, or the first when no city was named."""
+    if not bookings:
+        return None
+    if not city:
+        return bookings[0]
+    needle = city.lower()
+    for booking in bookings:
+        blob = " ".join(str(booking.get(key) or "") for key in ("hotel_name", "hotel_id", "city")).lower()
+        if needle in blob:
+            return booking
     return None
 
 
-def offer_facts(hotel, city):
-    """The only facts the model is allowed to say. Points follow the star rating."""
-    hotel = hotel or {}
-    name = str(hotel.get("name") or "the hotel")
-    where = str(hotel.get("city") or city or "the city")
-    try:
-        stars = int(float(hotel.get("stars") or hotel.get("rating") or 4))
-    except (TypeError, ValueError):
-        stars = 4
-    stars = min(5, max(1, stars))
-    points = 500 + stars * 100
-    return f"{points} loyalty points and late checkout at 14:00 at {name} in {where}"
+def booking_facts(booking):
+    """The only facts the model may say about a stay the guest may see."""
+    name = str(booking.get("hotel_name") or "the hotel")
+    stay = str(booking.get("id") or "the stay")
+    return f"1000 loyalty points and late checkout at 14:00 on booking {stay} at {name}"
+
+
+def generic_facts(city=""):
+    """The program, when there is no signed-in stay to attach an offer to."""
+    if city:
+        return f"No booking in {city} to attach an offer to. {GENERIC}"
+    return GENERIC
 
 
 def model_text(payload):
@@ -143,7 +177,7 @@ def header(response, name):
     return headers.get(name) or ""
 
 
-def mcp_call(url, name, arguments, opener=urlopen):
+def mcp_call(url, name, arguments, opener=urlopen, authorization=""):
     """One MCP tool call. The session header from initialize is sent with the call."""
     session = {}
 
@@ -155,6 +189,8 @@ def mcp_call(url, name, arguments, opener=urlopen):
         }
         if session.get("id"):
             headers["Mcp-Session-Id"] = session["id"]
+        if authorization:
+            headers["Authorization"] = authorization
         request = Request(url, data=json.dumps(payload).encode(), headers=headers, method="POST")
         with opener(request, timeout=MCP_TIMEOUT) as response:
             found = header(response, "Mcp-Session-Id")
@@ -191,6 +227,49 @@ def mcp_call(url, name, arguments, opener=urlopen):
 
 class Blocked(RuntimeError):
     """The gateway's guard rails rejected the guest's words."""
+
+
+class NotSignedIn(RuntimeError):
+    """The guest token could not be exchanged, so the offer stays the program."""
+
+
+def exchange(subject, opener=urlopen):
+    """RFC 8693 delegation. The loyalty desk is the actor, once, for this guest."""
+    if not AM_TOKEN_URL or not AM_CLIENT_ID or not AM_CLIENT_SECRET:
+        raise NotSignedIn("The loyalty desk has no Access Management client")
+    basic = base64.b64encode(f"{AM_CLIENT_ID}:{AM_CLIENT_SECRET}".encode()).decode()
+
+    def token(fields):
+        request = Request(
+            AM_TOKEN_URL,
+            data=urlencode(fields).encode(),
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+                "Authorization": f"Basic {basic}",
+            },
+            method="POST",
+        )
+        try:
+            with opener(request, timeout=30) as response:
+                payload = read_body(response)
+        except HTTPError as error:
+            error.read()
+            if error.code in (400, 401, 403):
+                raise NotSignedIn("The guest is not signed in") from None
+            raise RuntimeError(f"Access Management refused the exchange ({error.code})") from None
+        if not isinstance(payload, dict) or not payload.get("access_token"):
+            raise NotSignedIn("The guest is not signed in")
+        return payload["access_token"]
+
+    actor = token({"grant_type": "client_credentials"})
+    return token({
+        "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+        "subject_token": subject,
+        "subject_token_type": "urn:ietf:params:oauth:token-type:access_token",
+        "actor_token": actor,
+        "actor_token_type": "urn:ietf:params:oauth:token-type:access_token",
+    })
 
 
 def screen(question, opener=urlopen):
@@ -247,16 +326,24 @@ def llm_phrase(facts, opener=urlopen):
     return text
 
 
-def offer(question, mcp=mcp_call, phrase=llm_phrase, screen=screen):
-    """The loyalty offer for a question: the guard rails, the hotels' tools, then the model."""
+def offer(question, mcp=mcp_call, phrase=llm_phrase, screen=screen, *, authorization="", exchange=exchange):
+    """The program for a guest who is not signed in, or points on a booking they may see."""
     if not question:
         raise RuntimeError("Ask with a question.")
     screen(question)
+    subject = bearer(authorization)
+    if not subject:
+        return phrase(GENERIC)
+    try:
+        token = exchange(subject)
+        raw = mcp(HOTELS_MCP_URL, "listBookings", {}, authorization=f"Bearer {token}")
+    except NotSignedIn:
+        return phrase(GENERIC)
+    except RuntimeError:
+        return phrase(GENERIC)
     city = city_of(question)
-    arguments = {"city": city} if city else {"q": question[:200]}
-    raw = mcp(MCP_URL, "searchHotels", arguments)
-    hotel = first_hotel(parse_json(raw))
-    facts = offer_facts(hotel, city)
+    booking = booking_for(bookings_of(raw), city)
+    facts = booking_facts(booking) if booking is not None else generic_facts(city)
     return phrase(facts)
 
 
@@ -273,7 +360,7 @@ def a2a_error(body, message):
             "error": {"code": -32000, "message": message}}
 
 
-def respond(method, path, raw, offer_fn=offer):
+def respond(method, path, raw, offer_fn=offer, authorization=""):
     """The status and body for one request the gateway or AgentCore would send."""
     path = path.split("?", 1)[0]
     if method == "GET" and path == "/ping":
@@ -288,7 +375,7 @@ def respond(method, path, raw, offer_fn=offer):
         except (ValueError, UnicodeDecodeError):
             body = {}
         try:
-            text = offer_fn(question_of(body))
+            text = offer_fn(question_of(body), authorization=authorization)
         except Blocked as error:
             return 200, json.dumps(a2a_result(body, str(error))).encode(), "application/json"
         except Exception as error:
@@ -306,7 +393,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length", "0"))
-        status, payload, content_type = respond("POST", self.path, self.rfile.read(length))
+        status, payload, content_type = respond(
+            "POST", self.path, self.rfile.read(length), authorization=self.headers.get("Authorization") or "")
         self._send(status, payload, content_type)
 
     def log_message(self, fmt, *args):

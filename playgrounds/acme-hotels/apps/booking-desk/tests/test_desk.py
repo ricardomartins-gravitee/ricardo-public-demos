@@ -79,9 +79,10 @@ class Tool(unittest.TestCase):
 
 
 class Call(unittest.TestCase):
-    def test_the_guest_token_goes_to_the_booking_desk_only(self):
+    def test_the_guest_token_goes_to_the_desk_that_answers(self):
         self.assertEqual(desk.authorization_for("ask_booking_desk", "Bearer guest"), "Bearer guest")
-        self.assertIsNone(desk.authorization_for("ask_loyalty_desk", "Bearer guest"))
+        self.assertEqual(desk.authorization_for("ask_loyalty_desk", "Bearer guest"), "Bearer guest")
+        self.assertIsNone(desk.authorization_for("searchHotels", "Bearer guest"))
 
     def test_the_question_is_posted_to_the_gateway_with_the_caller_token(self):
         seen = {}

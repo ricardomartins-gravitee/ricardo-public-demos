@@ -53,7 +53,8 @@
                 {
                   "outputPrice": 10,
                   "name": "gemma4:12b",
-                  "inputPrice": 1
+                  "inputPrice": 1,
+                  "parametersOverride": "{\"reasoning_effort\":\"none\",\"keep_alive\":\"30m\"}"
                 }
               ],
               "provider": "OPEN_AI_COMPATIBLE",

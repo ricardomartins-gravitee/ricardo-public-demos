@@ -98,11 +98,11 @@ The demo secrets and passwords are settings too: they are in [Logins and secrets
 | 1 Cache similar questions | Answers a question close in meaning to an earlier one from its cache, without calling the model |
 | 2 Limit tokens | Stops a caller that spent its tokens before the model is reached |
 | 3 Block risky prompts | Reads each prompt with a small model and rejects the malicious ones |
-| 4 Sign in and authorize | Accepts only the token the booking desk got by exchange, and filters the bookings with Authorization Management |
+| 4 Sign in and authorize | Accepts a booking only when the booking desk or the loyalty desk exchanged the guest's token, and filters the bookings with Authorization Management |
 | 5 Look at the agent's tools | Turns the hotels' REST API into MCP tools that any MCP client finds |
 | 6 Ask the booking desk | The concierge has no hotel search. A hotel question calls the booking desk, through the gateway |
 | 7 Walk the Agent Management catalog | Shows the agents, the local models, the tools, the prompts and resources, the studio, the workspace and the dashboard |
-| 8 Ask the loyalty desk in AWS | The concierge calls the loyalty desk through the gateway. The desk is registered in the local AWS account and calls back for the model and the hotel tools |
+| 8 Ask the loyalty desk in AWS | The concierge calls the loyalty desk through the gateway. A signed-in guest gets the offer on a booking. A guest who is not signed in gets the program |
 
 The lessons are in [`guide.md`](guide.md). The Lab UI shows it next to the running consoles.
 

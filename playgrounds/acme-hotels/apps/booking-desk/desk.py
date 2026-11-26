@@ -72,6 +72,7 @@ TOOLS = [
         "name": "ask_loyalty_desk",
         "description": (
             "Ask the loyalty desk in AWS for a loyalty offer. "
+            "A signed-in guest gets an offer on a booking. A guest who is not signed in gets the program. "
             "Pass the guest's request unchanged in question. Use this for points, late checkout, or the loyalty desk."
         ),
         "inputSchema": QUESTION,
@@ -112,7 +113,9 @@ This note is simulated for the demo.
 
 The concierge talks to the guest who is signed in. A hotel search and the list of that guest's bookings
 go to the booking desk, with the guest's token. The desk exchanges that token. The gateway checks each
-booking. The loyalty desk is not given the token. The desk does not read another guest's bookings.
+booking, including a booking read by its id. A loyalty offer for a booking goes to the loyalty desk with
+the same token. That desk exchanges it and reads only the bookings the gateway allows. A guest who is
+not signed in gets the loyalty program, not an offer on a booking, and no guest's booking.
 """
 RESOURCES = [
     {
@@ -191,8 +194,8 @@ def ask_agent(url, question, authorization, opener=urlopen, timeout=A2A_TIMEOUT,
 
 
 def authorization_for(tool, authorization):
-    """The guest token goes to the booking desk, which exchanges it. The loyalty desk is not given it."""
-    if tool == "ask_booking_desk":
+    """The guest token goes to the desk that answers. Each desk exchanges it when the call needs the guest."""
+    if tool in ("ask_booking_desk", "ask_loyalty_desk"):
         return authorization
     return None
 

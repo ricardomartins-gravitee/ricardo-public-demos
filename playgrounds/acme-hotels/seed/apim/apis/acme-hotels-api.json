@@ -230,9 +230,43 @@
   "plans": [
     {
       "definitionVersion": "V4",
-      "flows": [],
+      "flows": [
+        {
+          "name": "Bookings require a guest",
+          "enabled": true,
+          "selectors": [
+            {
+              "type": "HTTP",
+              "path": "/bookings",
+              "pathOperator": "STARTS_WITH",
+              "methods": []
+            }
+          ],
+          "request": [
+            {
+              "name": "Interrupt",
+              "description": "The open plan has no guest token, so a booking is refused. Hotel search is not on this flow.",
+              "enabled": true,
+              "policy": "policy-interrupt",
+              "configuration": {
+                "errorKey": "AI_AGENT_DELEGATED_ACCESS_REQUIRED",
+                "variables": [],
+                "scope": "REQUEST",
+                "message": "Access denied: this endpoint requires a token the booking desk or the loyalty desk exchanged for the signed-in guest.",
+                "statusCode": 403
+              }
+            }
+          ],
+          "response": [],
+          "subscribe": [],
+          "publish": [],
+          "entrypointConnect": [],
+          "interact": [],
+          "tags": []
+        }
+      ],
       "name": "Public",
-      "description": "Unrestricted access to MCP Server, and Open resources.",
+      "description": "Hotel search is open. A booking requires a token the booking desk or the loyalty desk exchanged.",
       "security": {
         "type": "KEY_LESS",
         "configuration": {}
@@ -264,17 +298,17 @@
           "request": [
             {
               "name": "Interrupt",
-              "description": "Accepts a token the booking desk exchanged for the guest. Refuses a token with no actor, another actor, a second delegation, or no guest.",
+              "description": "Accepts a token the booking desk or the loyalty desk exchanged for the guest. Refuses a token with no actor, another actor, a second delegation, or no guest.",
               "enabled": true,
               "policy": "policy-interrupt",
               "configuration": {
                 "errorKey": "AI_AGENT_DELEGATED_ACCESS_REQUIRED",
                 "variables": [],
                 "scope": "REQUEST",
-                "message": "Access denied: this endpoint requires a token the booking desk exchanged for the signed-in guest.",
+                "message": "Access denied: this endpoint requires a token the booking desk or the loyalty desk exchanged for the signed-in guest.",
                 "statusCode": 403
               },
-              "condition": "{#context.attributes['jwt.claims']['act']?.['sub'] != 'acme-hotels-booking-desk' || #context.attributes['jwt.claims']['act']?.['act'] != null || #context.attributes['jwt.claims']['email'] == null}"
+              "condition": "{#context.attributes['jwt.claims']['act']?.['sub'] != 'acme-hotels-booking-desk' && #context.attributes['jwt.claims']['act']?.['sub'] != 'acme-hotels-loyalty-desk' || #context.attributes['jwt.claims']['act']?.['act'] != null || #context.attributes['jwt.claims']['email'] == null}"
             },
             {
               "name": "Transform Headers",
@@ -298,14 +332,14 @@
           "response": [
             {
               "name": "FGA Response Filter",
-              "description": "Filter bookings based on OpenFGA can_view authorization",
+              "description": "Keep a booking only when the signed-in guest may see it, whether the call lists bookings or reads one by id.",
               "enabled": true,
               "policy": "groovy",
               "configuration": {
                 "scope": "REQUEST",
                 "readContent": true,
                 "overrideContent": true,
-                "script": "import groovy.json.JsonSlurper\nimport groovy.json.JsonOutput\n\nif (response.status == 200 && response.content != null) {\n    def slurper = new JsonSlurper()\n    def body = slurper.parseText(response.content)\n\n    if (body instanceof List && !body.isEmpty()) {\n        def userEmail = context.attributes['jwt.claims']['email']\n        def userId = userEmail != null && userEmail.contains('@') ? userEmail.substring(0, userEmail.indexOf('@')) : userEmail\n\n        def filtered = body.findAll { booking ->\n            try {\n                def payload = JsonOutput.toJson([\n                    subject: [type: 'User', id: userId],\n                    resource: [type: 'Booking', id: booking.id],\n                    action: [name: 'can_view'],\n                    context: [booking_id: booking.id]\n                ])\n\n                def evalUrl = new URL('${GATEWAY_INTERNAL_URL}/hotels-authz/access/v1/evaluation')\n                def conn = evalUrl.openConnection()\n                conn.setRequestMethod('POST')\n                conn.setRequestProperty('Content-Type', 'application/json')\n                conn.setDoOutput(true)\n                conn.setConnectTimeout(5000)\n                conn.setReadTimeout(5000)\n                conn.getOutputStream().write(payload.getBytes('UTF-8'))\n                conn.getOutputStream().flush()\n                conn.getOutputStream().close()\n\n                def reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream()))\n                def sb = new StringBuilder()\n                def line\n                while ((line = reader.readLine()) != null) { sb.append(line) }\n                reader.close()\n                conn.disconnect()\n\n                def result = slurper.parseText(sb.toString())\n                return result.decision == true\n            } catch (Exception e) {\n                return false\n            }\n        }\n\n        return JsonOutput.toJson(filtered)\n    }\n}\nreturn response.content\n"
+                "script": "import groovy.json.JsonSlurper\nimport groovy.json.JsonOutput\n\ndef allowed = { bookingId ->\n    try {\n        def userEmail = context.attributes['jwt.claims']['email']\n        def userId = userEmail != null && userEmail.contains('@') ? userEmail.substring(0, userEmail.indexOf('@')) : userEmail\n        def payload = JsonOutput.toJson([\n            subject: [type: 'User', id: userId],\n            resource: [type: 'Booking', id: bookingId],\n            action: [name: 'can_view'],\n            context: [booking_id: bookingId]\n        ])\n\n        def evalUrl = new URL('${GATEWAY_INTERNAL_URL}/hotels-authz/access/v1/evaluation')\n        def conn = evalUrl.openConnection()\n        conn.setRequestMethod('POST')\n        conn.setRequestProperty('Content-Type', 'application/json')\n        conn.setDoOutput(true)\n        conn.setConnectTimeout(5000)\n        conn.setReadTimeout(5000)\n        conn.getOutputStream().write(payload.getBytes('UTF-8'))\n        conn.getOutputStream().flush()\n        conn.getOutputStream().close()\n\n        def reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream()))\n        def sb = new StringBuilder()\n        def line\n        while ((line = reader.readLine()) != null) { sb.append(line) }\n        reader.close()\n        conn.disconnect()\n\n        def result = new JsonSlurper().parseText(sb.toString())\n        return result.decision == true\n    } catch (Exception e) {\n        return false\n    }\n}\n\nif (response.status == 200 && response.content != null) {\n    def body = new JsonSlurper().parseText(response.content)\n    if (body instanceof List) {\n        return JsonOutput.toJson(body.findAll { booking -> allowed(booking.id) })\n    }\n    if (body instanceof Map && body.id != null && !allowed(body.id)) {\n        response.status = 403\n        return JsonOutput.toJson([message: 'Access denied: this booking is not one the signed-in guest may see.'])\n    }\n}\nreturn response.content\n"
               },
               "condition": "{#request.method == 'GET' && (#request.path == '/hotels/bookings' || #request.path.startsWith('/hotels/bookings/'))}"
             }

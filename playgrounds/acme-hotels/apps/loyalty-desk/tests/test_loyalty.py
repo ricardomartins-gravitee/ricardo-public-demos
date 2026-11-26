@@ -30,27 +30,49 @@ class Offer(unittest.TestCase):
     def test_a_named_city_is_the_search_filter(self):
         self.assertEqual(loyalty.city_of("What offer does John get for his Paris stay?"), "Paris")
 
-    def test_the_first_hotel_of_a_list_is_the_stay(self):
-        hotel = loyalty.first_hotel([{"name": "Chateau", "city": "Paris", "stars": 5}])
-        self.assertEqual(loyalty.offer_facts(hotel, "Paris"),
-                         "1000 loyalty points and late checkout at 14:00 at Chateau in Paris")
+    def test_a_stay_in_the_named_city_is_the_offer(self):
+        bookings = [
+            {"id": "BK-0005", "hotel_name": "Imperial Tokyo"},
+            {"id": "BK-0001", "hotel_name": "Le Chateau Paris"},
+        ]
+        self.assertEqual(loyalty.booking_for(bookings, "Paris")["id"], "BK-0001")
+        self.assertIn("BK-0001", loyalty.booking_facts(bookings[1]))
 
-    def test_an_offer_asks_the_tool_then_the_model(self):
+    def test_a_guest_who_is_not_signed_in_gets_the_program(self):
         seen = {}
 
-        def mcp(url, name, arguments):
-            seen["mcp"] = (url, name, arguments)
-            return json.dumps([{"name": "Chateau", "city": "Paris", "stars": 4}])
+        def mcp(url, name, arguments, authorization=""):
+            raise AssertionError("listed bookings")
 
         def phrase(facts):
             seen["facts"] = facts
-            return "Stay at Chateau and collect 900 points, with late checkout at 14:00."
+            return facts
 
-        text = loyalty.offer("Ask the loyalty desk what offer John gets for his Paris stay.", mcp, phrase, lambda question: None)
-        self.assertEqual(seen["mcp"][1], "searchHotels")
-        self.assertEqual(seen["mcp"][2], {"city": "Paris"})
-        self.assertIn("900 loyalty points", seen["facts"])
-        self.assertIn("Chateau", text)
+        text = loyalty.offer(
+            "Ask the loyalty desk what offer John gets for his Paris stay.",
+            mcp, phrase, lambda question: None)
+        self.assertIn("Sign in", text)
+        self.assertNotIn("BK-", seen["facts"])
+
+    def test_a_signed_in_guest_gets_the_offer_on_their_booking(self):
+        seen = {}
+
+        def mcp(url, name, arguments, authorization=""):
+            seen["call"] = (url, name, authorization)
+            return json.dumps([{"id": "BK-0001", "hotel_name": "Le Chateau Paris"}])
+
+        def phrase(facts):
+            seen["facts"] = facts
+            return facts
+
+        text = loyalty.offer(
+            "Ask the loyalty desk what offer John gets for his Paris stay.",
+            mcp, phrase, lambda question: None,
+            authorization="Bearer guest", exchange=lambda subject: "delegated")
+        self.assertEqual(seen["call"][1], "listBookings")
+        self.assertEqual(seen["call"][2], "Bearer delegated")
+        self.assertIn("BK-0001", text)
+        self.assertIn("Le Chateau Paris", seen["facts"])
 
     def test_a_blocked_question_does_not_search(self):
         def refuse(question):
@@ -104,7 +126,8 @@ class Http(unittest.TestCase):
     def test_an_invocation_returns_the_offer(self):
         body = {"jsonrpc": "2.0", "id": "1", "method": "message/send",
                 "params": {"message": {"parts": [{"text": "Paris"}]}}}
-        status, payload, _ = loyalty.respond("POST", "/invocations", json.dumps(body).encode(), lambda question: "900 points")
+        status, payload, _ = loyalty.respond(
+            "POST", "/invocations", json.dumps(body).encode(), lambda question, authorization="": "900 points")
         answered = json.loads(payload)
         self.assertEqual(status, 200)
         self.assertEqual(answered["result"]["parts"][0]["text"], "900 points")
