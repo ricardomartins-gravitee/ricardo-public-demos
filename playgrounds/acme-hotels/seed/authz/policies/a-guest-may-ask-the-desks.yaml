@@ -1,0 +1,8 @@
+# The desk process calls each desk with the guest's token, which names no concierge actor. That is this permit
+name: A guest may ask the desks
+status: DEPLOYED
+type: AGENT
+policy: |
+  @id("A guest may ask the desks")
+  permit (principal, action == Action::"invoke", resource == Agent::"acme-hotels-plus-booking-desk");
+  permit (principal, action == Action::"invoke", resource == Agent::"acme-hotels-plus-loyalty-desk");

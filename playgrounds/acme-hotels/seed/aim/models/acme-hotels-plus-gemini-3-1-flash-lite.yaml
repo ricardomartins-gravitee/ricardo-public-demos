@@ -1,0 +1,12 @@
+needs: GEMINI_API_KEY
+entityId: acme-hotels-plus-gemini-3-1-flash-lite
+source: ACME Hotels
+definition:
+  name: ACME Hotels Gemini 3.1 Flash Lite
+  queryName: gemini-3.1-flash-lite
+  provider: acme-hotels-plus-gemini
+  family: gemini-flash-lite
+  contextWindow: 1048576
+  capabilities: [text, vision, video, audio, pdf, reasoning, function-calling]
+  pricing: {inputPer1M: 0.25, outputPer1M: 1.5, currency: USD}
+  description: Smaller Google Gemini. Nothing in the lessons routes to it

@@ -1,0 +1,45 @@
+# The hotels' tools and the booking-desk tool, under one endpoint. Open, so a client can list them without a token
+name: ACME Hotels Desk
+description: Hotel search, hotel details, the booking desk and the loyalty desk, as one MCP server
+contextPath: /acme-hotels-plus/desk
+supportedProtocolVersions: ["2025-03-26", "2025-06-18", "2025-11-25"]
+fga: false
+plan:
+  name: Open
+  security:
+    type: KEYLESS
+    configuration: {}
+tools:
+  - {server: ACME Hotels API MCP Server, tool: searchHotels}
+  - {server: ACME Hotels API MCP Server, tool: getHotelById}
+  - {server: ACME Hotels API MCP Server, tool: getHotelReviews}
+  - {server: acme-hotels-booking-desk, tool: ask_booking_desk}
+  - {server: acme-hotels-booking-desk, tool: ask_loyalty_desk}
+# A tools/call is judged before the tool runs. Listing tools stays open. The caller is guest when a token
+# is on the request, and anonymous when it is not: the loyalty tool permits only guest
+flows:
+  - name: Authorization
+    enabled: true
+    selectors: [{type: MCP, methods: [tools/call]}]
+    request:
+      - name: Fine-Grained Authorization
+        description: Search stays open. The loyalty tool needs a guest token. The website does not call this studio
+        enabled: true
+        policy: authz-pep
+        configuration:
+          subjectType: User
+          subjectExpr: "{#request.headers['Authorization'] != null ? 'guest' : 'anonymous'}"
+          actionExpr: "{#context.attributes['mcp_tool_name'] == null ? '' : (#context.attributes['mcp_tool_name'].startsWith('ask_') ? 'acme-hotels-booking-desk.' + #context.attributes['mcp_tool_name'] : 'acme-hotels-api-mcp-server.' + #context.attributes['mcp_tool_name'].toLowerCase())}"
+          resourceType: MCPTool
+          resourceExpr: "{#context.attributes['mcp_tool_name'] == null ? '' : (#context.attributes['mcp_tool_name'].startsWith('ask_') ? 'acme-hotels-booking-desk.' + #context.attributes['mcp_tool_name'] : 'acme-hotels-api-mcp-server.' + #context.attributes['mcp_tool_name'].toLowerCase())}"
+          agentIdentityResolution: true
+          denyStatus: 403
+          denyMessage: Not allowed by ACME Hotels authorization policy
+          logDecisions: true
+          evalTimeoutMs: 1000
+          noSnapshotPolicy: RETRY_THEN_DENY
+          noSnapshotMaxWaitMs: 3000
+          noSnapshotRetryDelayMs: 100
+    response: []
+    subscribe: []
+    publish: []

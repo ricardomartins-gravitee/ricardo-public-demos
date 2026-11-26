@@ -1,0 +1,18 @@
+# A hosted delegated agent, same kind as the booking desk. It exchanges the guest's token when an offer
+# is for a booking. The concierge is the same kind and forwards the guest's token instead of exchanging one.
+name: Loyalty desk
+description: The loyalty desk, which acts for the guest when an offer is for a booking
+type: AGENT
+kind: HOSTED_DELEGATED
+
+clientId: acme-hotels-loyalty-desk
+clientSecret: "${AGENT_CLIENT_SECRET}"
+
+redirectUris:
+  - "${HOTELS_WEB_URL}/" # The website. The desk does not send the guest there; this kind requires a redirect
+
+oauth:
+  tokenCustomClaims:
+    - tokenType: access_token
+      claimName: email
+      claimValue: "{#context.attributes['user']['username']}"

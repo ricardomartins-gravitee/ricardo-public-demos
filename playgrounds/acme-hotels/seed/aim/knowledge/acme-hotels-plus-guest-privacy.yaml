@@ -1,0 +1,14 @@
+entityId: acme-hotels-plus-guest-privacy
+source: ACME Hotels
+name: ACME Hotels guest privacy
+description: Simulated rule for what the concierge may say about a guest
+content: |
+  # ACME Hotels guest privacy
+
+  This note is simulated for the demo.
+
+  The concierge talks to the guest who is signed in. A hotel search and the list of that guest's bookings
+  go to the booking desk, with the guest's token. The desk exchanges that token. The gateway checks each
+  booking, including a booking read by its id. A loyalty offer for a booking goes to the loyalty desk with
+  the same token. That desk exchanges it and reads only the bookings the gateway allows. A guest who is
+  not signed in gets the loyalty program, not an offer on a booking, and no guest's booking.

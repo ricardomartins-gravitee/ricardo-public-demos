@@ -1,0 +1,30 @@
+# The local models for the front desk, with a budget. The alias desk is gemma4:12b, the model the chat calls.
+# The agents do not call this workspace: it is the governed entry the console shows for a team
+name: ACME Hotels Desk
+version: "1.0"
+description: The front desk's model, with a budget for the day
+
+budgets:
+  - name: Front desk
+    dollars: 5
+    period: DAY
+
+components:
+  - provider: acme-hotels-plus-ollama
+    prefixPolicy: NO_PREFIX
+    models:
+      - {name: "gemma4:12b", aliases: [desk]}
+      - {name: "qwen3:1.7b", aliases: [qwen]}
+      - {name: "qwen3:0.6b", aliases: [small]}
+
+analytics:
+  enabled: true
+  logging:
+    mode: {entrypoint: true, endpoint: true}
+    phase: {request: true, response: true}
+    content: {headers: false, payload: true}
+  tracing: {enabled: true, verbose: false}
+
+members:
+  - {sourceId: hotels-front-desk, firstname: Front, lastname: desk, email: front-desk@acme-hotels.test, budget: Front desk}
+  - {source: memory, sourceId: admin, budget: Front desk, optional: true}

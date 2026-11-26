@@ -1,0 +1,18 @@
+# The concierge is a hosted agent, the same kind as the desks. Its process forwards the guest's token
+# and does not exchange one. The hotels API accepts only the booking desk and the loyalty desk as the actor.
+name: Concierge
+description: The concierge, which talks to the guest and forwards the guest's token
+type: AGENT
+kind: HOSTED_DELEGATED
+
+clientId: acme-hotels-concierge
+clientSecret: "${AGENT_CLIENT_SECRET}"
+
+redirectUris:
+  - "${HOTELS_WEB_URL}/" # The website. The concierge does not send the guest there; this kind requires a redirect
+
+oauth:
+  tokenCustomClaims:
+    - tokenType: access_token
+      claimName: email
+      claimValue: "{#context.attributes['user']['username']}"

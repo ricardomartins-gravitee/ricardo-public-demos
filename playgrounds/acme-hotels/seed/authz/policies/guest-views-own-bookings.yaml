@@ -1,0 +1,8 @@
+# John sees a booking when its id is one he owns. BK-0005 is not, so the list leaves it out
+name: A guest views a booking they own
+status: DEPLOYED
+type: API
+policy: |
+  @id("A guest views a booking they own")
+  permit (principal, action == Action::"can_view", resource is Booking)
+    when { principal.bookings.contains(context.booking_id) };

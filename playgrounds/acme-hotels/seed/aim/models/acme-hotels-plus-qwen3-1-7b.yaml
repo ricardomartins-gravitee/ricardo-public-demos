@@ -1,0 +1,12 @@
+# Listed in the catalog. The chat calls gemma4:12b
+entityId: acme-hotels-plus-qwen3-1-7b
+source: ACME Hotels
+definition:
+  name: ACME Hotels Qwen3 1.7B
+  queryName: qwen3:1.7b
+  provider: acme-hotels-plus-ollama
+  family: qwen3
+  contextWindow: 40960
+  capabilities: [text, reasoning, function-calling]
+  pricing: {inputPer1M: 50, outputPer1M: 50, currency: USD}
+  description: The model the proxy tries when a call to gemma4:12b fails

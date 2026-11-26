@@ -1,0 +1,13 @@
+# Seeded with the Gemini provider, and only when that key is set
+needs: GEMINI_API_KEY
+entityId: acme-hotels-plus-gemini-3-5-flash
+source: ACME Hotels
+definition:
+  name: ACME Hotels Gemini 3.5 Flash
+  queryName: gemini-3.5-flash
+  provider: acme-hotels-plus-gemini
+  family: gemini-flash
+  contextWindow: 1048576
+  capabilities: [text, vision, video, audio, pdf, reasoning, function-calling]
+  pricing: {inputPer1M: 1.5, outputPer1M: 9, currency: USD}
+  description: Google Gemini. Nothing in the lessons routes to it

@@ -1,0 +1,11 @@
+# A token the concierge exchanged names the concierge as the actor. The desks refuse that token.
+# The chat never sends one: the concierge process forwards the guest's token and does not exchange
+name: The concierge does not call a desk as itself
+status: DEPLOYED
+type: AGENT
+policy: |
+  @id("The concierge does not call a desk as itself")
+  forbid (principal, action == Action::"invoke", resource == Agent::"acme-hotels-plus-booking-desk")
+    when { context.agent == AgentIdentity::"<agent:acme-hotels-concierge>" };
+  forbid (principal, action == Action::"invoke", resource == Agent::"acme-hotels-plus-loyalty-desk")
+    when { context.agent == AgentIdentity::"<agent:acme-hotels-concierge>" };

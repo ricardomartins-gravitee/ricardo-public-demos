@@ -1,0 +1,55 @@
+# What a booking check can hold, for the policy editor. Decisions do not depend on it
+name: "🏨 ACME Hotels"
+schema: |
+  entity Hotel {};
+  entity User {
+    username?: String,
+    hotels?: Set<String>,
+    bookings?: Set<String>
+  };
+  entity Booking in [Hotel] {};
+  entity AgentIdentity {};
+  entity MCPServer {};
+  entity MCPTool in [MCPServer] {};
+  entity Model {};
+  entity Agent {};
+  action "can_view" appliesTo {
+    principal: [User],
+    resource: [Booking],
+    context: { booking_id?: String }
+  };
+  action "invoke" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [Model, Agent],
+    context: { agent?: AgentIdentity }
+  };
+  action "acme-hotels-api-mcp-server.searchhotels" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: {}
+  };
+  action "acme-hotels-api-mcp-server.gethotelbyid" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: {}
+  };
+  action "acme-hotels-api-mcp-server.gethotelreviews" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: {}
+  };
+  action "acme-hotels-api-mcp-server.listbookings" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: { agent?: AgentIdentity }
+  };
+  action "acme-hotels-booking-desk.ask_booking_desk" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: {}
+  };
+  action "acme-hotels-booking-desk.ask_loyalty_desk" appliesTo {
+    principal: [User, AgentIdentity],
+    resource: [MCPTool],
+    context: {}
+  };

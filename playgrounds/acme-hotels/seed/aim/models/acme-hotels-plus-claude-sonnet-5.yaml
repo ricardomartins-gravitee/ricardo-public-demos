@@ -1,0 +1,12 @@
+needs: ANTHROPIC_API_KEY
+entityId: acme-hotels-plus-claude-sonnet-5
+source: ACME Hotels
+definition:
+  name: ACME Hotels Claude Sonnet 5
+  queryName: claude-sonnet-5
+  provider: acme-hotels-plus-anthropic
+  family: claude-sonnet
+  contextWindow: 1000000
+  capabilities: [text, vision, pdf, reasoning, function-calling]
+  pricing: {inputPer1M: 2, outputPer1M: 10, currency: USD}
+  description: Anthropic model. Nothing in the lessons routes to it

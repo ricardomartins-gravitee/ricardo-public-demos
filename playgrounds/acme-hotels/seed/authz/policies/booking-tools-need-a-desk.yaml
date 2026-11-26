@@ -1,0 +1,17 @@
+# A booking tool is allowed when the actor is the booking desk or the loyalty desk. The hotels API still
+# enforces that on the path the desks call. This is the same rule, on the MCP page, for the simulator
+name: Booking tools need a desk
+status: DEPLOYED
+type: MCP
+policy: |
+  @id("Booking tools need a desk")
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.listbookings", resource == MCPTool::"acme-hotels-api-mcp-server.listbookings")
+    when { context.agent == AgentIdentity::"<agent:acme-hotels-booking-desk>" || context.agent == AgentIdentity::"<agent:acme-hotels-loyalty-desk>" };
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.getbookingbyid", resource == MCPTool::"acme-hotels-api-mcp-server.getbookingbyid")
+    when { context.agent == AgentIdentity::"<agent:acme-hotels-booking-desk>" || context.agent == AgentIdentity::"<agent:acme-hotels-loyalty-desk>" };
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.createbooking", resource == MCPTool::"acme-hotels-api-mcp-server.createbooking")
+    when { context.agent == AgentIdentity::"<agent:acme-hotels-booking-desk>" || context.agent == AgentIdentity::"<agent:acme-hotels-loyalty-desk>" };
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.updatebooking", resource == MCPTool::"acme-hotels-api-mcp-server.updatebooking")
+    when { context.agent == AgentIdentity::"<agent:acme-hotels-booking-desk>" || context.agent == AgentIdentity::"<agent:acme-hotels-loyalty-desk>" };
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.cancelbooking", resource == MCPTool::"acme-hotels-api-mcp-server.cancelbooking")
+    when { context.agent == AgentIdentity::"<agent:acme-hotels-booking-desk>" || context.agent == AgentIdentity::"<agent:acme-hotels-loyalty-desk>" };

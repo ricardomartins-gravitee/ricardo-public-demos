@@ -1,0 +1,13 @@
+# A model in the cloud, for the catalog only: nothing routes to it. Seeded with a real key only
+needs: OPENAI_API_KEY
+name: ACME Hotels OpenAI
+slug: acme-hotels-plus-openai
+visibility: EVERYONE
+credential: ACME Hotels OpenAI key
+connection:
+  type: openai-compatible
+  targetUri: https://api.openai.com/v1
+models:
+  - name: gpt-5.4-mini
+    taskType: CHAT
+    registryRef: {templateId: openai, modelId: gpt-5.4-mini}

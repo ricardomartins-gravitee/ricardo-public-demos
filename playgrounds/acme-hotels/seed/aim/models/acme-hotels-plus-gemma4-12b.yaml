@@ -1,0 +1,12 @@
+# The model the concierge, the booking desk and the loyalty desk call
+entityId: acme-hotels-plus-gemma4-12b
+source: ACME Hotels
+definition:
+  name: ACME Hotels Gemma 4 12B
+  queryName: gemma4:12b
+  provider: acme-hotels-plus-ollama
+  family: gemma4
+  contextWindow: 262144
+  capabilities: [text, vision, audio, reasoning, function-calling]
+  pricing: {inputPer1M: 200, outputPer1M: 200, currency: USD}
+  description: The model the chat calls, through the LLM proxy

@@ -1,0 +1,6 @@
+# The loyalty desk, registered from its card. It runs as a Bedrock AgentCore runtime
+entityId: acme-hotels-plus-loyalty-desk
+source: ACME Hotels
+url: ${LOYALTY_CARD_URL}
+metadata:
+  riskClassification: limited

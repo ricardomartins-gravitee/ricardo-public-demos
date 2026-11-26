@@ -1,0 +1,8 @@
+# The studio names a caller guest only when the request carries a token. The website does not call this studio:
+# the concierge calls the desk process, and that call is not this check
+name: The loyalty tool needs a guest
+status: DEPLOYED
+type: MCP
+policy: |
+  @id("The loyalty tool needs a guest")
+  permit (principal == User::"guest", action == Action::"acme-hotels-booking-desk.ask_loyalty_desk", resource == MCPTool::"acme-hotels-booking-desk.ask_loyalty_desk");

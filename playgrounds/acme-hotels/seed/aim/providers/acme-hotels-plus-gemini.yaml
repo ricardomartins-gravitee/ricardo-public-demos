@@ -1,0 +1,18 @@
+# A model in the cloud, for the catalog only: nothing routes to it. Seeded with a real key only
+needs: GEMINI_API_KEY
+name: ACME Hotels Gemini
+slug: acme-hotels-plus-gemini
+visibility: EVERYONE
+credential: ACME Hotels Gemini key
+connection:
+  type: gemini
+  targetUri: https://generativelanguage.googleapis.com/v1beta
+models:
+  - name: gemini-3.5-flash
+    sourceModelId: models/gemini-3.5-flash
+    taskType: CHAT
+    registryRef: {templateId: google, modelId: gemini-3.5-flash}
+  - name: gemini-3.1-flash-lite
+    sourceModelId: models/gemini-3.1-flash-lite
+    taskType: CHAT
+    registryRef: {templateId: google, modelId: gemini-3.1-flash-lite}
