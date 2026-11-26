@@ -1,0 +1,157 @@
+#!/bin/sh
+# The Lab start and stop do not control the Edge daemon. It is a launch daemon with
+# RunAtLoad, and its DNS override is what sends api.anthropic.com to this Mac.
+# localhost is rewritten to 127.0.0.1 because the Lab publishes the reactor and the
+# gateway on IPv4 only, and this daemon dials ::1 for localhost.
+
+set -eu
+
+LABEL=io.gravitee.edge-daemon
+PLIST=/Library/LaunchDaemons/io.gravitee.edge-daemon.plist
+BIN=/usr/local/bin/edge-daemon
+CONFIG=${EDGE_DAEMON_CONFIG:-"$HOME/.edge-daemon/config.yaml"}
+RESOLVER=/etc/resolver/api.anthropic.com
+REACTOR=127.0.0.1
+REACTOR_PORT=18093
+
+usage() {
+    echo "Usage: scripts/edge up | down | status" >&2
+    exit 2
+}
+
+need_mac() {
+    if [ "$(uname)" != "Darwin" ]; then
+        echo "This Edge daemon runs on macOS." >&2
+        exit 1
+    fi
+}
+
+installed() {
+    if [ ! -x "$BIN" ] || [ ! -f "$PLIST" ]; then
+        echo "Install the daemon from Gamma, Edge Management, Daemon deployment." >&2
+        exit 1
+    fi
+}
+
+loaded() {
+    launchctl print "system/$LABEL" >/dev/null 2>&1
+}
+
+reactor_up() {
+    nc -z -G 1 "$REACTOR" "$REACTOR_PORT" >/dev/null 2>&1
+}
+
+# Startup reads this file before the reactor answers. A domain of api.anthropic.com
+# here hijacks that name even when Edge Management says interception is off.
+resting_config() {
+    if [ ! -f "$CONFIG" ]; then
+        echo "Missing $CONFIG. Install the daemon from Gamma, Edge Management, Daemon deployment." >&2
+        exit 1
+    fi
+    if [ ! -w "$CONFIG" ]; then
+        echo "Cannot write $CONFIG." >&2
+        exit 1
+    fi
+    tmp=$(mktemp)
+    trap 'rm -f "$tmp"' EXIT
+    awk '
+        BEGIN { dns = 0 }
+        /^dns:$/ { dns = 1 }
+        /^[a-z]/ && $0 !~ /^dns:$/ { dns = 0 }
+        dns && $0 ~ /^[[:space:]]+- api\.anthropic\.com$/ {
+            sub(/api\.anthropic\.com$/, "unused.invalid")
+        }
+        {
+            gsub("http://localhost:18093", "http://127.0.0.1:18093")
+            gsub("http://localhost:8082", "http://127.0.0.1:8082")
+            print
+        }
+    ' "$CONFIG" > "$tmp"
+    mv "$tmp" "$CONFIG"
+    trap - EXIT
+}
+
+flush_dns() {
+    sudo dscacheutil -flushcache
+    sudo killall -HUP mDNSResponder
+}
+
+intercepting() {
+    [ -f "$RESOLVER" ]
+}
+
+up() {
+    need_mac
+    installed
+    if ! reactor_up; then
+        echo "Start AI Usage Governance first. The reactor on ${REACTOR}:${REACTOR_PORT} is down, and the daemon would keep its last interception list." >&2
+        exit 1
+    fi
+    resting_config
+    sudo launchctl enable "system/$LABEL"
+    if loaded; then
+        sudo launchctl kickstart -k "system/$LABEL"
+    else
+        sudo launchctl bootstrap system "$PLIST"
+    fi
+    i=0
+    while [ "$i" -lt 10 ]; do
+        if pgrep -q -f "$BIN"; then
+            break
+        fi
+        i=$((i + 1))
+        sleep 1
+    done
+    if ! pgrep -q -f "$BIN"; then
+        echo "The daemon did not stay up. See $HOME/.edge-daemon/logs/daemon.stderr.log" >&2
+        exit 1
+    fi
+    if intercepting; then
+        echo "Daemon is running and intercepting api.anthropic.com. Re-seed, then run scripts/edge up again, to start the pass with interception off."
+        exit 0
+    fi
+    echo "Daemon is running. Interception is off until DNS domains in Edge Management is api.anthropic.com."
+}
+
+down() {
+    need_mac
+    installed
+    if loaded; then
+        sudo launchctl bootout "system/$LABEL"
+    fi
+    # RunAtLoad would start it again at the next login and put the DNS override back.
+    sudo launchctl disable "system/$LABEL"
+    sudo rm -f "$RESOLVER"
+    flush_dns
+    if pgrep -q -f "$BIN"; then
+        echo "The daemon is still running." >&2
+        exit 1
+    fi
+    echo "Daemon is off. api.anthropic.com is no longer resolved on this Mac."
+}
+
+status() {
+    need_mac
+    if pgrep -q -f "$BIN"; then
+        echo "daemon: running"
+    else
+        echo "daemon: stopped"
+    fi
+    if intercepting; then
+        echo "interception: on (api.anthropic.com)"
+    else
+        echo "interception: off"
+    fi
+    if reactor_up; then
+        echo "reactor: up"
+    else
+        echo "reactor: down"
+    fi
+}
+
+case "${1:-}" in
+    up) up ;;
+    down) down ;;
+    status) status ;;
+    *) usage ;;
+esac
