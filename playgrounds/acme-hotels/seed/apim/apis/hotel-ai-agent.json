@@ -175,6 +175,27 @@
           ],
           "request": [
             {
+              "name": "Fine-Grained Authorization",
+              "description": "Anyone may ask the concierge. The website calls this proxy with the guest's token, or with none.",
+              "enabled": true,
+              "policy": "authz-pep",
+              "configuration": {
+                "subjectType": "User",
+                "subjectExpr": "{#request.path != null ? 'guest' : 'guest'}",
+                "actionExpr": "{#request.path != null ? 'invoke' : 'invoke'}",
+                "resourceType": "Agent",
+                "resourceExpr": "{#request.path != null ? 'acme-hotels-plus-concierge' : ''}",
+                "agentIdentityResolution": true,
+                "denyStatus": 403,
+                "denyMessage": "Not allowed by ACME Hotels authorization policy.",
+                "logDecisions": true,
+                "evalTimeoutMs": 1000,
+                "noSnapshotPolicy": "RETRY_THEN_DENY",
+                "noSnapshotMaxWaitMs": 3000,
+                "noSnapshotRetryDelayMs": 100
+              }
+            },
+            {
               "name": "Rate Limit",
               "description": "Protect from Resource Exhaustion",
               "enabled": true,

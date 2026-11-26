@@ -1,5 +1,21 @@
-# John, the hotels and the bookings the policy reasons over. John's id is the part of his Access Management
-# username before the @, which is the id the gateway sends. The bookings he owns are the ones he may see
+# John, the hotels and the bookings the booking policy reasons over. John's id is the part of his Access Management
+# username before the @, which is the id the hotels API sends. The bookings he owns are the ones he may see.
+# The catalog import is what Policy Management picks: the MCP servers and their tools, the local models, and the
+# three agents. Sync brings the Access Management users and the three hosted agents in as principals.
+# guest and anonymous are the callers the studio names when a token is, or is not, on the request.
+sync: access-management
+catalog:
+  mcp-servers:
+    - acme-hotels-api-mcp-server
+    - acme-hotels-booking-desk
+  models:
+    - acme-hotels-plus-gemma4-12b
+    - acme-hotels-plus-qwen3-1-7b
+    - acme-hotels-plus-qwen3-0-6b
+  agents:
+    - acme-hotels-plus-concierge
+    - acme-hotels-plus-booking-desk
+    - acme-hotels-plus-loyalty-desk
 source: local
 entities:
   - type: Hotel
@@ -33,3 +49,12 @@ entities:
   - type: Action
     id: can_view
     attributes: {_displayName: View a booking}
+  - type: Action
+    id: invoke
+    attributes: {_displayName: Invoke}
+  - type: User
+    id: guest
+    attributes: {_displayName: Guest with a token}
+  - type: User
+    id: anonymous
+    attributes: {_displayName: Caller without a token}

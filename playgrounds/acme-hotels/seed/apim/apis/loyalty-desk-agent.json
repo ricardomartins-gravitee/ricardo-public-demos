@@ -175,6 +175,27 @@
           ],
           "request": [
             {
+              "name": "Fine-Grained Authorization",
+              "description": "A guest may ask the loyalty desk. A token the concierge exchanged, which names the concierge as the actor, is refused.",
+              "enabled": true,
+              "policy": "authz-pep",
+              "configuration": {
+                "subjectType": "User",
+                "subjectExpr": "{#request.path != null ? 'guest' : 'guest'}",
+                "actionExpr": "{#request.path != null ? 'invoke' : 'invoke'}",
+                "resourceType": "Agent",
+                "resourceExpr": "{#request.path != null ? 'acme-hotels-plus-loyalty-desk' : ''}",
+                "agentIdentityResolution": true,
+                "denyStatus": 403,
+                "denyMessage": "The concierge does not call this desk as itself.",
+                "logDecisions": true,
+                "evalTimeoutMs": 1000,
+                "noSnapshotPolicy": "RETRY_THEN_DENY",
+                "noSnapshotMaxWaitMs": 3000,
+                "noSnapshotRetryDelayMs": 100
+              }
+            },
+            {
               "name": "Rate Limit",
               "description": "Protect from Resource Exhaustion",
               "enabled": true,

@@ -15,7 +15,7 @@ x-gravitee:
   description: Exposure, security and governance of the ACME Hotels concierge, its booking desk and a loyalty desk that runs as an AWS agent
   tags: [AI Agents, LLM Proxy, MCP, A2A, Guard Rails, Authorization, Agent Management]
   source: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop
-  duration: 45 min
+  duration: 55 min
   first_start: 12 min
   requires:
     images:
@@ -46,7 +46,7 @@ x-gravitee:
       APIM_GATEWAY_REGISTRY: graviteeio
       AM_VERSION: "4.13.7"
       AM_REGISTRY: graviteeio
-  consoles: [apim-management-ui, gamma-ui]
+  consoles: [acme-hotels-plus-web, gamma-ui, apim-management-ui]
   accounts:
     - for: "ACME Hotels website: John Doe (guest)"
       username: john.doe@gravitee.io
@@ -77,7 +77,7 @@ services:
   acme-hotels-plus-backend:
     image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-backend:latest
     build: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312:acme-hotel-api # Pinned to an upstream commit, so the image does not change unannounced
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build} # build: build it here at each start; always: pull it, build it here if it cannot be pulled
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-missing} # missing: build it here when the image is not here yet. A build at every start gives the image a new id, so Apply never settles
     container_name: gio-acme-hotels-plus-backend
     restart: unless-stopped
     ports:
@@ -98,7 +98,7 @@ services:
     build:
       context: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312
       dockerfile: hotel-agent/Dockerfile
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-missing}
     container_name: gio-acme-hotels-plus-agent
     restart: unless-stopped
     entrypoint: ["python", "/acme-hotels-plus-forward-subject-token.py"] # Forwards the guest token. The booking desk exchanges it
@@ -140,7 +140,7 @@ services:
     build:
       context: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312
       dockerfile: hotel-agent/Dockerfile
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-missing}
     container_name: gio-acme-hotels-plus-booking
     restart: unless-stopped
     depends_on:
@@ -176,7 +176,7 @@ services:
   acme-hotels-plus-desk:
     image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-desk:latest
     build: ./apps/booking-desk
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-missing}
     container_name: gio-acme-hotels-plus-desk
     restart: unless-stopped
     environment:
@@ -194,7 +194,7 @@ services:
   acme-hotels-plus-web:
     image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-web:latest
     build: https://github.com/gravitee-io-labs/Gravitee-AI-Agent-Workshop.git#22cc1a664520b2d47d988c97b16cfefc2f495312:acme-hotel-website
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-missing}
     container_name: gio-acme-hotels-plus-web
     restart: unless-stopped
     ports:
@@ -240,7 +240,7 @@ services:
   acme-hotels-plus-loyalty:
     image: ghcr.io/ricardomartins-gravitee/ricardo-public-demos/acme-hotels-plus-loyalty:latest
     build: ./apps/loyalty-desk
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-missing}
     command: ["python", "register.py"] # Serves the desk for the gateway and registers the AgentCore runtime
     container_name: gio-acme-hotels-plus-loyalty
     restart: unless-stopped
@@ -273,10 +273,10 @@ services:
   acme-hotels-plus-seed:
     image: ghcr.io/gravitee-io-labs/gravitee-lab/seeder:latest
     build: ../../../../../seeder
-    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-build}
+    pull_policy: ${RICARDO_PUBLIC_DEMOS_ACME_HOTELS_PLUS_PULL_POLICY:-missing}
     container_name: gio-acme-hotels-plus-seed
     restart: "no"
-    entrypoint: ["/bin/sh", "/acme-hotels-plus-before-seed.sh"] # Removes a desk that is still a service application, then seeds
+    entrypoint: ["/bin/sh", "/acme-hotels-plus-before-seed.sh"] # Removes the public playground's hotel-ai-agent client, then seeds
     depends_on:
       apim-management-api:
         condition: service_healthy
@@ -291,7 +291,7 @@ services:
     volumes:
       - ./seed:/seed:ro
       - ./.state:/state # What the seed created, to remove it later
-      - ./apps/seed/before-seed.sh:/acme-hotels-plus-before-seed.sh:ro # The desks must be agents, and Agent Identity lists this domain
+      - ./apps/seed/before-seed.sh:/acme-hotels-plus-before-seed.sh:ro # The public playground leaves a service application in this domain
     environment:
       APIM_MANAGEMENT_URL: http://apim-management-api:8083
       APIM_USERNAME: admin
@@ -332,7 +332,7 @@ services:
       - internal
 
   agent-inspector:
-    command: ["sh", "/acme-hotels-plus-inspector.sh"] # Names each agent on the diagram. The image's entrypoint runs this
+    # The icon files are mounted. The image starts itself: replacing its command would hide this playground's own pages
     volumes:
       - ./apps/inspector/start.sh:/acme-hotels-plus-inspector.sh:ro
       - ./apps/inspector/agents.js:/acme-hotels-plus-agents.js:ro # Icons for the concierge, the booking desk and the loyalty desk

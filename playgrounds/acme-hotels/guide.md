@@ -28,14 +28,14 @@ The hexagons are the Gravitee *gateway*. It has a *proxy* for each kind of traff
 - the hotels' *MCP* (model context protocol) server on the gateway turns the hotels' REST API into tools. The booking desk calls them. A booking goes through **ACME Hotels API**, where lesson 4's plans run. The concierge calls the desk's own MCP server (`ask_booking_desk`, `ask_loyalty_desk`), and that server also publishes the prompts and the stay policy. Lesson 5 shows the catalog copy of both servers, and the studio that publishes a selection of their tools on its own address
 - the hotels' REST API sits behind the gateway too, which lets only the right calls through
 
-*Access Management*, Gravitee's identity service, signs guests in. *Authorization Management* says which bookings each guest may see.
+*Access Management*, Gravitee's identity service, signs guests in. *Authorization Management* says which bookings each guest may see, which tools the studio allows, which models the agents may call, and which agent may call another.
 
 ### The website and the consoles
 
 - Open [the ACME Hotels website](http://localhost:8130) in your browser.
 - The **AI Agent Inspector** is on the left of the website. It draws every call the agent makes, live.
 - The chat is on the right. The buttons under it send the sentences of lessons 1, 3, 4 and 8.
-- **APIM Console** and **Gamma Console** are tabs of this page: sign in with `admin` / `admin`. In the APIM Console, the APIs of the story are **ACME Hotels API**, **ACME Hotels API MCP Server**, **ACME Hotels LLMs**, **Hotel AI Agent**, **Booking Desk Agent**, **Loyalty Desk Agent** and **ACME Hotels Authorization**.
+- The first tab is the hotel website, and **Open ACME Hotels** opens it in its own window. **Gamma Console** is the next tab. **APIM Console** is the last tab. Sign in to either console with `admin` / `admin`. In the APIM Console, the APIs of the story are **ACME Hotels API**, **ACME Hotels API MCP Server**, **ACME Hotels LLMs**, **Hotel AI Agent**, **Booking Desk Agent**, **Loyalty Desk Agent** and **ACME Hotels Authorization**.
 
 Do the lessons in order.
 
@@ -166,7 +166,7 @@ The same names then show up twice more. Each copy has its own job.
 - In the **Gamma Console** tab, open **Catalog**, **MCP Servers**. Gravitee connected to the live servers and stored what they answered. **ACME Hotels API MCP Server** is the hotels' list, read from `/hotels-mcp/mcp`. **ACME Hotels Booking Desk** is the concierge's list, read from the desk process: `ask_booking_desk`, `ask_loyalty_desk`, the prompts and the two resources. The running agents call those servers. They do not call this catalog page.
 - Open **Secure**, **MCP Proxies**. **ACME Hotels Desk** is mode **Studio**, at `/acme-hotels-plus/desk`. A studio picks tools that are already in the catalog and publishes them as one gateway address, on the plan **Open**. This one picks `searchHotels`, `getHotelById`, `getHotelReviews`, `ask_booking_desk` and `ask_loyalty_desk`. The prompts and the resources stay on the booking-desk server. A caller of `/acme-hotels-plus/desk` is who this row governs. The chat uses the original servers.
 
-Change the entrypoint, and the booking desk and the loyalty desk follow it. The catalog keeps the previous list until the next seed, which reads the servers again. Change the catalog, and the studio can pick the new names. Change **ACME Hotels Desk**, and callers of `/acme-hotels-plus/desk` follow it.
+Change the entrypoint, and the booking desk and the loyalty desk follow it. The catalog keeps the previous list until the next seed, which reads the servers again. Change the catalog, and the studio can pick the new names. Change **ACME Hotels Desk**, and callers of `/acme-hotels-plus/desk` follow it. A call to that address is judged before the tool runs. Lesson 9 shows the refusal.
 
 ## 6. Ask the booking desk
 
@@ -219,10 +219,42 @@ The loyalty desk is registered in the local AWS account as a Bedrock AgentCore r
 - In the **Gamma Console** tab, open **Agent Management**. **Agents** lists **ACME Hotels Loyalty Desk** beside the concierge and the booking desk. Its card says it runs in AWS. The address a caller uses is the gateway.
 - Open **Local AWS account** from the **Details** tab. The runtime's name is `acme_hotels_loyalty`, in `us-east-1`. The access key and the secret key are in **Accounts** on that tab.
 
+## 9. Govern the tool, the model and the agent
+
+Lesson 4 decides a booking. The same engine decides a tool on the studio, a model on the LLM proxy, and a call to an agent. The chat keeps working: search stays open, the agents still call Gemma, and a desk is still called with the guest's token.
+
+### Try
+
+- In **MCPJam**, add a second server. Name it `desk`. The URL is `http://apim-gateway:8082/acme-hotels-plus/desk`. Connect, open **Tools**, and run `searchHotels` with `city` `Paris`. The hotels come back.
+- Run `ask_loyalty_desk` with `question` `What offer does John get?`. Leave the token empty. The call is refused.
+- In a terminal, ask the LLM proxy for a model the agents do not use:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:8082/llm-proxy/chat/completions \
+  -H 'content-type: application/json' \
+  -d '{"model":"claude-sonnet-5","messages":[{"role":"user","content":"hello"}]}'
+```
+
+The status is `403`. The same call with `"model":"ollama:gemma4:12b"` is the path the agents use, and it is allowed.
+
+### Look
+
+In the **Gamma Console** tab, open **Authorization**, then **Policy Management**.
+
+- **MCPs** lists three policies. **Hotel search is open** permits search, the hotel, its reviews, and `ask_booking_desk`. **The loyalty tool needs a guest** permits `ask_loyalty_desk` only for a caller who sent a token. **Booking tools need a desk** permits `listBookings` and the other booking tools when the actor is the booking desk or the loyalty desk. The desks do not call the studio for those tools. They call **ACME Hotels API**, which is the check in lesson 4. Open **Policy Simulator** under **Testing** to try **Booking tools need a desk** with the booking desk as the actor.
+- **AI Models** lists **The desks call the local models**. It permits Gemma, Qwen 1.7B and Qwen 0.6B. The `403` above is a model name that policy does not permit. The agents send `ollama:gemma4:12b`, which is Gemma.
+- **A2A Agents** lists three policies. **Anyone may ask the concierge** is the website. **A guest may ask the desks** is the desk process, which forwards the guest's token. **The concierge does not call a desk as itself** forbids a token whose actor is the concierge. The concierge process does not exchange, so the chat never sends that token. The simulator is where that forbid is the answer.
+- **APIs** still lists **A guest views a booking they own**, from lesson 4.
+- **Decisions**, under **Observability**, names the policy after a studio call, a model call, or a message to an agent.
+
+**Entities** lists the MCP servers, their tools, the three models and the three agents imported from the catalog, and the users and agents synced from Access Management.
+
 ## If something does not work
 
 - **The concierge does not answer.**
-  It reasons with `gemma4:12b`, on your machine, through Ollama. Is Ollama running? `ollama list` must show `gemma4:12b` and `qwen3:1.7b`. The first answer takes longer while Gemma loads. After that, Ollama keeps it for 30 minutes, and the calls do not wait for a reasoning trace. If Gemma cannot answer, the proxy tries `qwen3:1.7b` once. A search also waits for the booking desk.
+  It reasons with `gemma4:12b`, on your machine, through Ollama. Is Ollama running? `ollama list` must show `gemma4:12b` and `qwen3:1.7b`. The first answer takes longer while Gemma loads. After that, Ollama keeps it for 30 minutes, and the calls do not wait for a reasoning trace. If Gemma cannot answer, the proxy tries `qwen3:1.7b` once. A search also waits for the booking desk. A `403` that names the local models means the call asked for a model other than Gemma or Qwen.
+- **Lesson 9 refuses search on the studio.**
+  The tool name the studio sends has to match the policy. Re-seed, then run `searchHotels` again. `ask_loyalty_desk` without a token is supposed to be refused.
 - **Lesson 8 does not reach the loyalty desk.**
   Send **Ask the loyalty desk what offer John gets for his Paris stay.** again.
 - **A `429` in lesson 1.**

@@ -1,0 +1,10 @@
+# Search, the hotel and its reviews stay open. The studio asks this on every tools/call of those three
+name: Hotel search is open
+status: DEPLOYED
+type: MCP
+policy: |
+  @id("Hotel search is open")
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.searchhotels", resource == MCPTool::"acme-hotels-api-mcp-server.searchhotels");
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.gethotelbyid", resource == MCPTool::"acme-hotels-api-mcp-server.gethotelbyid");
+  permit (principal, action == Action::"acme-hotels-api-mcp-server.gethotelreviews", resource == MCPTool::"acme-hotels-api-mcp-server.gethotelreviews");
+  permit (principal, action == Action::"acme-hotels-booking-desk.ask_booking_desk", resource == MCPTool::"acme-hotels-booking-desk.ask_booking_desk");

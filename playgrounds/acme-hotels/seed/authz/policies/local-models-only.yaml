@@ -1,0 +1,10 @@
+# The LLM proxy asks this before a completion. Gemma is the model the agents name. Qwen is the failover
+# and the small model that stays listed. Any other name has no permit, so the proxy refuses it
+name: The desks call the local models
+status: DEPLOYED
+type: MODEL
+policy: |
+  @id("The desks call the local models")
+  permit (principal, action == Action::"invoke", resource == Model::"acme-hotels-plus-gemma4-12b");
+  permit (principal, action == Action::"invoke", resource == Model::"acme-hotels-plus-qwen3-1-7b");
+  permit (principal, action == Action::"invoke", resource == Model::"acme-hotels-plus-qwen3-0-6b");

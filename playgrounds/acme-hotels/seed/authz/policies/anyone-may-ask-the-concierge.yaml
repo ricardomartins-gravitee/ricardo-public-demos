@@ -1,0 +1,7 @@
+# The website calls the concierge with the guest's token, or with none. Either is this permit
+name: Anyone may ask the concierge
+status: DEPLOYED
+type: AGENT
+policy: |
+  @id("Anyone may ask the concierge")
+  permit (principal, action == Action::"invoke", resource == Agent::"acme-hotels-plus-concierge");

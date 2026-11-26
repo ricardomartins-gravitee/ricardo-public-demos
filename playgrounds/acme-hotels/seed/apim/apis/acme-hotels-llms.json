@@ -186,6 +186,26 @@
         ],
         "request": [
           {
+            "name": "Fine-Grained Authorization",
+            "description": "The agents may call Gemma, Qwen 1.7B and Qwen 0.6B. Any other model name is refused before the provider is called.",
+            "enabled": true,
+            "policy": "authz-pep",
+            "configuration": {
+              "subjectType": "User",
+              "subjectExpr": "{#request.path != null ? 'guest' : 'guest'}",
+              "actionExpr": "{#request.path != null ? 'invoke' : 'invoke'}",
+              "resourceType": "Model",
+              "resourceExpr": "{#jsonPath(#request.content, '$.model') == 'ollama:gemma4:12b' || #jsonPath(#request.content, '$.model') == 'gemma4:12b' ? 'acme-hotels-plus-gemma4-12b' : (#jsonPath(#request.content, '$.model') == 'ollama:qwen3:1.7b' || #jsonPath(#request.content, '$.model') == 'qwen3:1.7b' ? 'acme-hotels-plus-qwen3-1-7b' : (#jsonPath(#request.content, '$.model') == 'ollama:qwen3:0.6b' || #jsonPath(#request.content, '$.model') == 'qwen3:0.6b' ? 'acme-hotels-plus-qwen3-0-6b' : 'closed-model'))}",
+              "denyStatus": 403,
+              "denyMessage": "This playground calls the local models. That model is not one of them.",
+              "logDecisions": true,
+              "evalTimeoutMs": 1000,
+              "noSnapshotPolicy": "RETRY_THEN_DENY",
+              "noSnapshotMaxWaitMs": 3000,
+              "noSnapshotRetryDelayMs": 100
+            }
+          },
+          {
             "name": "AI - Prompt Guard Rails",
             "description": "Block a malicious guest message on every agent's model call: the concierge, the booking desk and the loyalty desk.",
             "enabled": true,
