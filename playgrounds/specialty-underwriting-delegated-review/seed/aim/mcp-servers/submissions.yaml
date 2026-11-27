@@ -1,0 +1,4 @@
+name: Specialty Underwriting MCP
+entityId: mcp-server.specialty-underwriting-mcp
+endpoint: ${SUBMISSIONS_ORIGIN}
+description: Synthetic cyber submission read and ready-for-quote tools

@@ -1,0 +1,6 @@
+name: Cyber underwriters review a submission
+status: DEPLOYED
+policy: |
+  @id("Cyber underwriters review a submission")
+  permit (principal in Group::"<group:cyber-underwriters>", action == Action::"<server>.get_submission_context", resource == MCPTool::"<server>.get_submission_context");
+  permit (principal in Group::"<group:cyber-underwriters>", action == Action::"<server>.mark_ready_for_quote", resource == MCPTool::"<server>.mark_ready_for_quote");

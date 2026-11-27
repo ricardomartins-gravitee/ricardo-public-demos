@@ -1,0 +1,55 @@
+name: specialty-underwriting
+description: Synthetic cyber underwriters and the hosted review agent
+
+settings:
+  oidc:
+    redirectUriStrictMatching: true
+    clientRegistrationSettings:
+      allowLocalhostRedirectUri: true
+      allowHttpSchemeRedirectUri: true
+  # Delegation only. Impersonation stays off so a client cannot become the underwriter.
+  # Scope handling stays downscoping: an exchange cannot gain a scope the subject or the actor lacks.
+  tokenExchangeSettings:
+    enabled: true
+    allowDelegation: true
+    allowImpersonation: false
+    maxDelegationDepth: 1
+    allowedSubjectTokenTypes:
+      - urn:ietf:params:oauth:token-type:access_token
+    allowedRequestedTokenTypes:
+      - urn:ietf:params:oauth:token-type:access_token
+    allowedActorTokenTypes:
+      - urn:ietf:params:oauth:token-type:access_token
+    idJagSettings:
+      laxValidation: false
+    tokenExchangeOAuthSettings:
+      inherited: false
+      scopeHandling: downscoping
+
+scopes:
+  - {key: openid, name: OpenID, description: Identifies the signed-in person}
+  - {key: profile, name: Profile, description: Name of the signed-in person}
+  - {key: email, name: Email, description: Email of the signed-in person}
+  - {key: "submission:read", name: Read submission, description: Read a synthetic submission through the gateway}
+  - {key: "submission:mark-ready", name: Mark ready, description: Mark a synthetic submission ready for quote}
+
+users:
+  - username: casey.hale@specialty-underwriting.test
+    email: casey.hale@specialty-underwriting.test
+    firstName: Casey
+    lastName: Hale
+    password: "${DEMO_PASSWORD}"
+    additionalInformation:
+      name: Casey Hale
+  - username: jordan.clerk@specialty-underwriting.test
+    email: jordan.clerk@specialty-underwriting.test
+    firstName: Jordan
+    lastName: Clerk
+    password: "${DEMO_PASSWORD}"
+    additionalInformation:
+      name: Jordan Clerk
+
+groups:
+  - name: cyber-underwriters
+    description: People who may review a cyber submission and mark it ready for quote
+    members: [casey.hale@specialty-underwriting.test]

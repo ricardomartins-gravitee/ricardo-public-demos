@@ -1,0 +1,8 @@
+# A delegated agent may read. The same person marking ready in their own session is the permit above.
+# This forbid wins when the token names an actor, so the denial is a real tools/call, not a hidden tool.
+name: Delegated agent cannot mark a submission ready
+status: DEPLOYED
+policy: |
+  @id("Delegated agent cannot mark a submission ready")
+  forbid (principal, action == Action::"<server>.mark_ready_for_quote", resource == MCPTool::"<server>.mark_ready_for_quote")
+    when { context has agent };
